@@ -17,16 +17,33 @@ commodities = ['apples','shoes','wheat']
 class Trader:
     def __init__(self, name = ''):
         self.name = name
-        self.count =  {x: rng.randint(4)  for x in commodities}
-        self.valuation = {x: rng.random()  for x in commodities}
-        self.utility = {x: 1.0  for x in commodities}
+        self.count =  {x: 1+rng.randint(4)  for x in commodities}
+        vals = rng.dirichlet(3.0*np.ones(len(commodities)))
+        # I like this as I can do inheritance of "similar" values
+        # easily: use scaled up "parent" vals as the alpha!
+        # self.valuation = {x: vals[i]  for i,x in enumerate(commodities)}
         self.neighbours = []
-        self.given_val = {}       # keys will be the neighbours
-        self.recd_val = {}  # keys will be the neighbours
-        self.num_trades = {}  # keys will be the neighbours
+        # keys will be the neighbours for the following dictionaries
+        self.given_val = {}       
+        self.recd_val = {}
+        self.num_trades = {} 
 
     def __str__(self):
         return self.name
+
+    def _get_utility(self, suggested_counts):
+        """
+        return the utility to this agent of having the suggested commodity counts
+        """
+        return np.sum(np.log(1+suggested_counts))
+
+    def _get_utility_increase(self, commod, increment):
+        """
+        return the utility INCREASE to this agent of having its commodity counts change by the suggested increments/decrements. 
+        """
+        changes = np.zeros(len(commodities))
+        changes[comm
+        return _get_utility(self.counts + changes) - _get_utility(self.counts)
 
     def add_neighbour(self, new_neighbour):
         if (new_neighbour in self.neighbours) or (new_neighbour.name == self.name):
@@ -34,7 +51,7 @@ class Trader:
         else:
             self.neighbours.append(new_neighbour)
             self.given_val[new_neighbour] = 0.0
-            self.recd_val[new_neighbour] = 0.0
+            self.recd_val[new_neighbour]  = 0.0
             self.num_trades[new_neighbour] = 0
             return True
 
@@ -45,6 +62,9 @@ class Trader:
         # check you can give it first!...
         if self.count[commodity] == 0: return False
         # evaluate the gift, and add the valuation to self.given_val[nb]
+        
+        value_lost = self._get_utility_increase(self, commodity, -1)
+        print commodity, self.valuation[commodity], nb
         self.given_val[nb] += self.valuation[commodity]
         nb.recd_val[self] += nb.valuation[commodity]
         # you gave it away, so decrement the count...
@@ -64,13 +84,16 @@ class Trader:
         for nb in self.neighbours:
             print 'On %4d trades: gave %.1f, recd %.1f \t to %s' % (self.num_trades[nb], self.given_val[nb], self.recd_val[nb], nb)
         for x in commodities:
-            print '%8s: %3d,  %.1f,  %.1f ' % (x, self.count[x], self.valuation[x], self.utility[x])
+            print '%8s: %3d' % (x, self.count[x])
 
     def do_one_gift():
-        """
-        Consider giving one of a commodity to one neighbour. Evaluate willingness to do this for all commodities and all neighbours, including a do-nothing option.
+        """Consider giving one of a commodity to one neighbour. Evaluate
+        willingness to do this for all commodities and all neighbours,
+        including a do-nothing option.
 
-        Then DO IT, ie. update count, given_val, recd_val, num_trades for both self, and the receiver.
+        Then DO IT, ie. update count, given_val, recd_val, num_trades
+        for both self, and the receiver.
+
         """
         best_will, best_neighbour, best_commodity = -1000000000.0, None, None
         for nb in self.neighbours:
@@ -118,20 +141,20 @@ if __name__ == '__main__':
     edge_ends_list = []
     edge_labels = []
     for tr1 in traders:
-        n, tries = 0, 0
-        while (n<2) and (tries<10):
+        n, attempts = 0, 0
+        while (n<1) and (attempts<10):
+            attempts = attempts + 1
             tr2 = traders[rng.randint(len(traders))]
             isNewEdge = (tr1.add_neighbour(tr2) and tr2.add_neighbour(tr1))
             if isNewEdge:
                 edge_ends_list.append((tr1.name, tr2.name))
                 edge_labels.append(tr1.name + ' and ' + tr2.name)
-                n = n+1
-            tries = tries + 1
-    # traders[0].give('wheat', traders[1])  # test the gifting method.
+                n = n + 1
+    traders[0].give('wheat', traders[1])  # test the gifting method.
 
     for tr in traders:    
         tr.display()
 
-#%% Show the whole network as a picture    
+    #%% Show the whole network as a picture    
     G, node_posns = generate_drawable_graph(names, edge_ends_list)
     draw_graph(G, node_posns, names, edge_ends_list, edge_labels)
