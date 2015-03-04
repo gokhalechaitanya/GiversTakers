@@ -10,6 +10,7 @@ import numpy as np
 import numpy.random as rng
 import pylab as pl
 from network_pic import *
+np.set_printoptions(precision=2)
 
 commodities = ['apples','shoes','wheat']        
       
@@ -17,34 +18,40 @@ commodities = ['apples','shoes','wheat']
 class Trader:
     def __init__(self, name = ''):
         self.name = name
-        self.count =  {x: 1+rng.randint(4)  for x in commodities}
-        vals = rng.dirichlet(3.0*np.ones(len(commodities)))
+        #self.count =  rng.randint(1,10, size=len(commodities))
+        #vals = rng.dirichlet(3.0*np.ones(len(commodities)))
         # I like this as I can do inheritance of "similar" values
         # easily: use scaled up "parent" vals as the alpha!
-        # self.valuation = {x: vals[i]  for i,x in enumerate(commodities)}
+        self.count = {x: rng.randint(0,5)  for x in commodities}
         self.neighbours = []
-        # keys will be the neighbours for the following dictionaries
+        # keys for the following will be the neighbours for the following dictionaries
         self.given_val = {}       
         self.recd_val = {}
         self.num_trades = {} 
+        self.W0 = rng.normal()  
+        # strength of tendency to PASS (avoid gifting at all)
+
+        self.W1 = rng.normal()  
+        # strength of tendency to base trades on the value being given away
+        # (a +ve W1 means agent prefers low-loss trades)
+
+        self.W2 = rng.normal()  
+        # strength of tendency to base trades on shared history of trades
+        # (a +ve W2 means agent prefers to trade when it is "in the red")
 
     def __str__(self):
         return self.name
 
-    def _get_utility(self, suggested_counts):
+    def _get_utility(self):
         """
         return the utility to this agent of having the suggested commodity counts
         """
-        return np.sum(np.log(1+suggested_counts))
+        util = 0.0
+        for c in commodities:
+            util += np.log(1 + self.count[c])  # for example....
+        return util 
 
-    def _get_utility_increase(self, commod, increment):
-        """
-        return the utility INCREASE to this agent of having its commodity counts change by the suggested increments/decrements. 
-        """
-        changes = np.zeros(len(commodities))
-        changes[comm
-        return _get_utility(self.counts + changes) - _get_utility(self.counts)
-
+                
     def add_neighbour(self, new_neighbour):
         if (new_neighbour in self.neighbours) or (new_neighbour.name == self.name):
             return False
@@ -58,63 +65,101 @@ class Trader:
     def set_count(self, commodity, i): 
         self.count[commodity] = i
 
-    def give(self, commodity, nb): 
-        # check you can give it first!...
-        if self.count[commodity] == 0: return False
-        # evaluate the gift, and add the valuation to self.given_val[nb]
-        
-        value_lost = self._get_utility_increase(self, commodity, -1)
-        print commodity, self.valuation[commodity], nb
-        self.given_val[nb] += self.valuation[commodity]
-        nb.recd_val[self] += nb.valuation[commodity]
-        # you gave it away, so decrement the count...
-        self.count[commodity] -= 1
-        nb.count[commodity] += 1
-        return True
-        
-    def receive(self, commodity, nb): 
-        # evaluate the gift, and add the valuation to self.recd_val[nb]
-        self.given_val[nb] += self.valuation[commodity]
-        self.count[commodity] += 1
-
 
     def display(self):
         print '--------------------------------------------'
         print 'Trader ', self.name
+        print 'W0,W1,W2 : %.2f, %.2f, %.2f' %(self.W0, self.W1, self.W2)
         for nb in self.neighbours:
-            print 'On %4d trades: gave %.1f, recd %.1f \t to %s' % (self.num_trades[nb], self.given_val[nb], self.recd_val[nb], nb)
+            print 'On %4d trades: gave %.2f, recd %.2f \t with %s' % (self.num_trades[nb], self.given_val[nb], self.recd_val[nb], nb)
         for x in commodities:
             print '%8s: %3d' % (x, self.count[x])
-
-    def do_one_gift():
+        print 'utility = %.2f' %(self._get_utility())
+        
+    def do_one_gift(self, verbose=False):
         """Consider giving one of a commodity to one neighbour. Evaluate
         willingness to do this for all commodities and all neighbours,
         including a do-nothing option.
 
-        Then DO IT, ie. update count, given_val, recd_val, num_trades
-        for both self, and the receiver.
+        Then DO IT (with the give() method)
 
         """
-        best_will, best_neighbour, best_commodity = -1000000000.0, None, None
-        for nb in self.neighbours:
-            for c in commodities:
+        if verbose: self.display()
+        
+        #%% first we decide what to do
+        drive = np.zeros(shape=(len(self.neighbours), len(commodities)), dtype=float)
+        base_utility = self._get_utility()   
+        for j,nb in enumerate(self.neighbours):
+            for i,c in enumerate(commodities):
                 # eval the willingness to give this c to this nb.
-                willingness = 1 ### WORK HERE WHEN YOU WAKE UP!!!
+                # Thought experiment: "what if I gave c away to nb?"
+                if self.count[c] > 0:
+                    self.count[c] -= 1 
+                    loss = self._get_utility() - base_utility
+                    self.count[c] += 1  # cos it's only a thought expt! 
+                else:
+                    loss = -np.Inf
+                drive[j,i] = self.W1 * loss + self.W2 * (self.recd_val[nb] - self.given_val[nb])
 
+
+        willingness = np.exp(drive)
+        total_willing = np.sum(np.ravel(willingness))
+        total_unwilling = np.exp(self.W0)
+        # First decision: do nothing?
+        if total_willing > total_unwilling:
+            willingness = willingness / np.sum(np.ravel(willingness))
+            if verbose: 
+                print '#### %s considers gifting ' % (self.name), commodities
+                for j,nb in enumerate(self.neighbours):
+                    print '#### to %5s: '%(nb), willingness[j]
+            best_nb_index, best_commod_index = np.unravel_index(willingness.argmax(), willingness.shape)
+            best_nb = self.neighbours[best_nb_index]
+            best_commod = commodities[best_commod_index]
+            if verbose: print '#### Best option: give %s to %s' % (best_commod, best_nb)
+                
+            #%% So do it! Then DO IT, ie. update count, given_val, recd_val, num_trades for both self, and the receiver.
+            # Q. how to decide whether to just do nothing though?
+            if verbose: best_nb.display()
+            self.give(best_commod, best_nb)
+            if verbose: 
+                self.display()
+                best_nb.display()
+        else:  
+            # Agent prefers to PASS regarding gifting, this round
+            if verbose: print '#### best to PASS: %.2f better than %.2f' %(total_unwilling, total_willing)
+
+    def give(self, commodity, trader):
+        """ Give a specific commodity to a specific trader """
+        if self.count[commodity] == 0:
+            return
+            
+        base_utility = self._get_utility()   
+        self.count[commodity]    -= 1
+        lost = self._get_utility() - base_utility
+        self.given_val[trader] -= lost
+        self.num_trades[trader] += 1
+    
+        base_utility = trader._get_utility()   
+        trader.count[commodity] += 1
+        gained = trader._get_utility() - base_utility
+        trader.recd_val[self] += gained
+        trader.num_trades[self] += 1
+        
 # ----------- end of Trader class definition ------------------------------------------
 
 #%% Other methods - the global stuff
 
-def do_one_season():
+def do_one_season(traders, verbose=False):
     """Zillions of trades happen. Agents accumulate rewards. 
 
     Should we have a fixed number of trades? Should rewards be grand sum,
     or on-the-fly exponentially weighted moving average?
     """
-    for t in range(3):  # will be much bigger!
-        # pick a random trader
-        tr = traders[rng.randint(len(traders))]
-        tr.do_one_gift()
+    for t in range(10):  # will be much bigger!
+        # do one round of all traders, in a random order
+        for i in rng.permutation(len(traders)):
+            tr = traders[i]
+            tr.do_one_gift(verbose)
 
 
 def adapt_all_traders():
@@ -132,7 +177,7 @@ def adapt_all_traders():
 if __name__ == '__main__':
 
     # Define the trader network
-    names = ['Jim', 'Yoyo', 'Bianca', 'Bob', 'Serena', 'Kurt', 'Shaun']
+    names = ['Bulbulia', 'Yoyo'] #, 'Bianca', 'Bob', 'Serena', 'Kurt', 'Shaun', 'Shona', 'Grant', 'Bill', 'Shorty', 'Kim', 'Tyler']
     traders = []
     for name in names:
         tr = Trader(name)
@@ -150,11 +195,21 @@ if __name__ == '__main__':
                 edge_ends_list.append((tr1.name, tr2.name))
                 edge_labels.append(tr1.name + ' and ' + tr2.name)
                 n = n + 1
-    traders[0].give('wheat', traders[1])  # test the gifting method.
 
-    for tr in traders:    
-        tr.display()
+    # Test one trade:
+    #tr = traders[rng.randint(len(traders))]
+    #tr.do_one_gift()
+
+    for tr in traders: tr.display()
+    print '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^'
+    do_one_season(traders, verbose=False)
+    for tr in traders: tr.display()
+    
 
     #%% Show the whole network as a picture    
     G, node_posns = generate_drawable_graph(names, edge_ends_list)
-    draw_graph(G, node_posns, names, edge_ends_list, edge_labels)
+    edge_thck = 6
+    #edge_thck = []
+    #for (name1,name2) in edge_ends_list:
+    #    edge_thck.append(traders[name1].num_trades[traders[name2]])
+    draw_graph(G, node_posns, names, edge_ends_list, edge_labels, edge_thck)

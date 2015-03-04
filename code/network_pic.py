@@ -27,7 +27,7 @@ def generate_drawable_graph(node_names, edge_ends_list):
     #node_posns=nx.random_layout(G)
     return G, node_posns
     
-def draw_graph(G, node_posns, node_names, edge_ends_list, edge_labels):
+def draw_graph(G, node_posns, node_names, edge_ends_list, edge_labels, edge_thck=3):
     """ Assumes you've already called generate_drawable_graph() to get G and node_posns.
     """
     plt.clf()
@@ -37,7 +37,7 @@ def draw_graph(G, node_posns, node_names, edge_ends_list, edge_labels):
                            alpha=0.5, node_color='greenyellow')
     nx.draw_networkx_labels(G, node_posns, font_size=12,
                             font_family='sans-serif')
-    nx.draw_networkx_edges(G, node_posns, width=17,
+    nx.draw_networkx_edges(G, node_posns, width=edge_thck,
                            alpha=0.25,edge_color='blue')
     nx.draw_networkx_edge_labels(G, node_posns, edge_labels=edge_labels_dict, 
                                  label_pos=0.4, font_size=9)
