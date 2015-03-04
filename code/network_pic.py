@@ -8,12 +8,13 @@ Created on Fri Feb 27 11:17:57 2015
 import networkx as nx
 import matplotlib.pyplot as plt
 
+
 def generate_drawable_graph(node_names, edge_ends_list):
     """ Probably call this once only: else the nodes may jump from
     place to place each time you display the same graph!
     """
     # create networkx graph
-    G=nx.Graph()
+    G=nx.MultiDiGraph()
     # add nodes
     for node in node_names:
         G.add_node(node)
@@ -27,6 +28,7 @@ def generate_drawable_graph(node_names, edge_ends_list):
     #node_posns=nx.random_layout(G)
     return G, node_posns
     
+
 def draw_graph(G, node_posns, node_names, edge_ends_list, edge_labels, edge_thck=3):
     """ Assumes you've already called generate_drawable_graph() to get G and node_posns.
     """
@@ -39,8 +41,9 @@ def draw_graph(G, node_posns, node_names, edge_ends_list, edge_labels, edge_thck
                             font_family='sans-serif')
     nx.draw_networkx_edges(G, node_posns, width=edge_thck,
                            alpha=0.25,edge_color='blue')
-    nx.draw_networkx_edge_labels(G, node_posns, edge_labels=edge_labels_dict, 
-                                 label_pos=0.4, font_size=9)
+    #nx.draw_networkx_edge_labels(G, node_posns, edge_labels=edge_labels_dict, 
+    #                             label_pos=0.4, font_size=9)
+
     #nx.draw(G, pos)
     plt.axis('off')
     plt.show()

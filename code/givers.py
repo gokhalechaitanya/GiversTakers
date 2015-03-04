@@ -9,6 +9,7 @@ Marcus Frean.
 import numpy as np
 import numpy.random as rng
 import pylab as pl
+import networkx as nx
 from network_pic import *
 np.set_printoptions(precision=2)
 
@@ -39,6 +40,8 @@ class Trader:
         # strength of tendency to base trades on shared history of trades
         # (a +ve W2 means agent prefers to trade when it is "in the red")
 
+        self.utility_trail = [] # just a record of utility over a season
+
     def __str__(self):
         return self.name
 
@@ -51,6 +54,8 @@ class Trader:
             util += np.log(1 + self.count[c])  # for example....
         return util 
 
+    def append_utility_trail(self):
+        self.utility_trail.append(self._get_utility())
                 
     def add_neighbour(self, new_neighbour):
         if (new_neighbour in self.neighbours) or (new_neighbour.name == self.name):
@@ -155,12 +160,19 @@ def do_one_season(traders, verbose=False):
     Should we have a fixed number of trades? Should rewards be grand sum,
     or on-the-fly exponentially weighted moving average?
     """
-    for t in range(10):  # will be much bigger!
+    # First, reset the initial amounts of stuff - e.g. reflecting stochasticity in the environment.
+    for tr in traders:
+        tr.utility_trail = [] # reset trail to blank - it's a new season.
+        tr.count = {x: rng.randint(0,5)  for x in commodities}
+        tr.append_utility_trail()
+
+    # Second, do a bunch of rounds. In each round everyone gets to give if they want.
+    for t in range(10):  # could probably be bigger!
         # do one round of all traders, in a random order
         for i in rng.permutation(len(traders)):
             tr = traders[i]
             tr.do_one_gift(verbose)
-
+            tr.append_utility_trail()
 
 def adapt_all_traders():
     """Everyone reconsiders their position, given their relative
@@ -177,7 +189,7 @@ def adapt_all_traders():
 if __name__ == '__main__':
 
     # Define the trader network
-    names = ['Bulbulia', 'Yoyo'] #, 'Bianca', 'Bob', 'Serena', 'Kurt', 'Shaun', 'Shona', 'Grant', 'Bill', 'Shorty', 'Kim', 'Tyler']
+    names = ['Bulbulia', 'Yoyo', 'Bianca', 'Bob'] #, 'Serena', 'Kurt', 'Shaun', 'Shona', 'Grant', 'Bill', 'Shorty', 'Kim', 'Tyler']
     traders = []
     for name in names:
         tr = Trader(name)
@@ -195,7 +207,8 @@ if __name__ == '__main__':
                 edge_ends_list.append((tr1.name, tr2.name))
                 edge_labels.append(tr1.name + ' and ' + tr2.name)
                 n = n + 1
-
+    
+    H = nx.frucht_graph()  # nice to use this one or other standards...
     # Test one trade:
     #tr = traders[rng.randint(len(traders))]
     #tr.do_one_gift()
