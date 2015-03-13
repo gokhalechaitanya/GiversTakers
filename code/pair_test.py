@@ -82,8 +82,9 @@ if __name__ == '__main__':
     world.add_node(g2)
 
     g1.set_weights(w0, w1, w2)
+    g2.set_weights(w0, w1, w2)
     
-    
+    """
     g2w1 = np.linspace(-5., 5, 21)
     g2w2 = np.linspace(-5., 5, 21)
     X,Y = np.meshgrid(g2w1,g2w2)
@@ -119,26 +120,13 @@ if __name__ == '__main__':
     pl.savefig('utility-difference.png',dpi=200)
     
     """
-    fig2 = pl.figure()
-    im2 = pl.imshow(finalUtil_2, interpolation='bilinear', origin='lower', 
-                     cmap=pl.cm.gray, extent=(-5,5,-5,5))
-    pl.gca().set_title('Utility of agent 2')
-    pl.gca().set_ylabel('w1 of agent 2')
-    pl.gca().set_xlabel('w2 of agent 2')
-    levels2 = np.arange(0.0, np.max(finalUtil_2), 0.5)
-    CS2 = pl.contour(finalUtil_2, levels2, origin='lower',
-                             linewidths=2, extent=(-5,5,-5,5))
-    CB2 = pl.colorbar(CS2, shrink=0.8) #colorbar for the contours
-    # We can still add a colorbar for the image, too.
-    CBI2 = pl.colorbar(im2, orientation='vertical', shrink=0.8, extend='both')
-    pl.savefig('util2.png',dpi=200)
-    """
+
     
     
     
-    """
+
     print 'Running some gifting here'
     final_util1, final_util_2 = run_two_givers(g1, g2, 120)
     print final_util1, final_util_2    
     display_pair_sequence(g1, g2)
-    """
+
