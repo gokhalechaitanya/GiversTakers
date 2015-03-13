@@ -121,12 +121,12 @@ class Giver:
                                                       self.W2 * (self.recd_val[nb] - self.given_val[nb]))      
             else:
                 for j,nb in enumerate(self.neighbours):
-                    drive[j,i] = 0.0 # can't give away what don't have!
+                    drive[j,i] = 0.00000001 # very hard to give away what don't have!
 
         if verbose: 
             print 'drive is ', drive
-        
         total_drive = np.sum(np.ravel(drive))
+
         if verbose: 
             print '#### %s considers gifting ' % (self.name), self.world.commodities
             for j,nb in enumerate(self.neighbours):

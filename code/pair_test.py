@@ -76,21 +76,21 @@ if __name__ == '__main__':
     w2 = 6.0      # if +ve, agent wants to give when other has given more.
     """
     if len(sys.argv) < 4:
-        sys.exit('usage: python %s  w0 w1 w2 for giver A  [w0 w1 w2 for giver B]' % (sys.argv[1]))
+        sys.exit('usage: python %s  w0 w1 w2 for giver A  [w0 w1 w2 for giver B]' % (sys.argv[0]))
     elif len(sys.argv) >= 4:
         SINGLE_TEST = True
         g1w0 = float(sys.argv[1])
         g1w1 = float(sys.argv[2])
         g1w2 = float(sys.argv[3])
         g1.set_weights(g1w0, g1w1, g1w2)
-        g1.describe()
+        g1.display()
     if len(sys.argv) == 7:
         SINGLE_TEST = False
         g2w0 = float(sys.argv[1])
         g2w1 = float(sys.argv[2])
         g2w2 = float(sys.argv[3])
         g2.set_weights(g2w0, g2w1, g2w2)
-        g2.describe()
+        g2.display()
 
     
     if SINGLE_TEST == True:   
@@ -109,7 +109,7 @@ if __name__ == '__main__':
         finalUtil_2 = np.zeros(shape=X.shape)
         for i1,val1 in enumerate(g2w1):
             for i2,val2 in enumerate(g2w2):
-                g2.set_weights(w0, val1, val2)  # NOTE: uses same w0 as Agent 1.
+                g2.set_weights(g1w0, val1, val2)  # NOTE: uses same w0 as Agent 1.
                 g1.set_count('love', 20)        
                 g1.set_count('respect', 10)        
                 g1.set_count('backrub', 0)        
