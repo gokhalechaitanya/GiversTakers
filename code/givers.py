@@ -96,7 +96,7 @@ class Giver:
         
     def do_one_gift(self, temperature = 1.0, verbose=False):
         """Consider giving one of a commodity to one neighbour. Evaluate
-        willingness to do this for all commodities and all neighbours,
+        drive to do this for all commodities and all neighbours,
         including a do-nothing option.
 
         Then DO IT (with the give() method)
@@ -108,54 +108,57 @@ class Giver:
         #print 'CHECK: %d nbrs and %d commods' % (len(self.neighbours), len(self.world.commodities))
         drive = np.zeros(shape=(len(self.neighbours), len(self.world.commodities)), dtype=float)
         base_utility = self.get_utility()   
-        for j,nb in enumerate(self.neighbours):
-            for i,c in enumerate(self.world.commodities):
-                # eval the willingness to give this c to this nb.
-                # Thought experiment: "what if I gave c away to nb?"
-                if self.count[c] > 0:
-                    self.count[c] -= 1 
-                    loss = self.get_utility() - base_utility
-                    self.count[c] += 1  # cos it's only a thought expt! 
-                else:
-                    loss = -99.0
-                drive[j,i] = self.W1 * loss + self.W2 * (self.recd_val[nb] - self.given_val[nb])
+        for i,c in enumerate(self.world.commodities):
+            # eval the drive to give this c to this nb.
+            # Thought experiment: "what if I gave c away to nb?"
+            if self.count[c] > 0:
+                self.count[c] -= 1 
+                loss = self.get_utility() - base_utility
+                self.count[c] += 1  # cos it's only a thought expt! 
+                for j,nb in enumerate(self.neighbours):
+                    drive[j,i] = np.exp(self.W0 +
+                                                      self.W1 * loss + 
+                                                      self.W2 * (self.recd_val[nb] - self.given_val[nb]))      
+            else:
+                for j,nb in enumerate(self.neighbours):
+                    drive[j,i] = 0.0 # can't give away what don't have!
+
         if verbose: 
             print 'drive is ', drive
-        drive_noaction = self.W0
         
-        willingness = np.exp(drive/temperature)
-        unwillingness = np.exp(drive_noaction/temperature)
-        total_willingness = np.sum(np.ravel(willingness))
+        total_drive = np.sum(np.ravel(drive))
+        if verbose: 
+            print '#### %s considers gifting ' % (self.name), self.world.commodities
+            for j,nb in enumerate(self.neighbours):
+                print '#### to %5s (drive) :' %(nb),
+                print drive[j,:]
+                print '#### to %5s (cumPr) :' %(nb),
+                print prob #cumulativeProb.reshape(drive.shape)[j,:]
 
-        # First decision: do nothing?
-        if rng.random() < unwillingness / (unwillingness + total_willingness):
-            # do nothing
-            if verbose: print '#### best to PASS: %.2f better than %.2f' %(unwillingness, total_willingness)
+        # First decision: if do something what would it be?
+        prob = drive / total_drive
+        cumulativeProb = np.cumsum(prob)
+        # choose an action with probability proportional to the normalised will.
+        i = np.sum(rng.random() > cumulativeProb)
+        nbr_index, commod_index = np.unravel_index(i, drive.shape)
+        drive_of_chosen_act = drive[nbr_index, commod_index]
+
+        # 2nd decision: do you want to do that, versus do nothing?
+        drive_of_noaction = np.exp(1.)
+        fraction = drive_of_noaction / (drive_of_noaction + drive_of_chosen_act)
+        if rng.random() <  fraction:   # do nothing
+            if verbose: print '#### best to PASS: %.2f better than %.2f' %(drive_of_noaction, drive_of_chosen_act)
         else:
-            prob = willingness/np.sum(willingness)
-            cumulativeProb = np.cumsum(prob)
-            if verbose: 
-                print '#### %s considers gifting ' % (self.name), self.world.commodities
-                for j,nb in enumerate(self.neighbours):
-                    print '#### to %5s (drive) :' %(nb),
-                    print drive[j,:]
-                    print '#### to %5s (cumPr) :' %(nb),
-                    print prob #cumulativeProb.reshape(willingness.shape)[j,:]
-            # choose an action with probability proportional to the normalised will.
-            r = rng.random()
-            i = np.sum(r > cumulativeProb)
-            chosen_nbr_index, chosen_commod_index = np.unravel_index(i, willingness.shape)
-            nbr = self.neighbours[chosen_nbr_index]
-            commod = self.world.commodities[chosen_commod_index]
+            nbr = self.neighbours[nbr_index]
+            commod = self.world.commodities[commod_index]
             if verbose: print '#### (%.2f) Choice: give %s to %s' % (r, commod, nbr)
                 
-            #%% So do it! Then DO IT, ie. update count, given_val, recd_val, for both self, and the receiver.
-            # Q. how to decide whether to just do nothing though?
-            self.give(commod, nbr)
+            self.give(commod, nbr) # GIVE IT!
 
             if verbose: 
                 self.display()
                 nbr.display()
+
 
     def give(self, commodity, recipient):
         """ Give a specific commodity to a specific trader """
@@ -171,9 +174,11 @@ class Giver:
         recipient.count[commodity] += 1
         gained = recipient.get_utility() - base_utility
         recipient.recd_val[self] += gained
-        
+
 # ----------- end of Giver class definition ------------------------------------------
+
 # ----------- start of World class definition ------------------------------------------
+
 class World:
     def __init__(self, commodities=[]):
         self.commodities = commodities
