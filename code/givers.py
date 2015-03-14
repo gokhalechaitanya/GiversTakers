@@ -29,9 +29,7 @@ class Giver:
             self.count = start_counts        
             
         self.neighbours = []
-        # keys for the following will be the neighbours for the following dictionaries
-        self.given_val = {}       
-        self.recd_val = {}
+
         self.W0 = rng.normal()  
         # strength of tendency to PASS (avoid gifting at all)
 
@@ -42,12 +40,20 @@ class Giver:
         self.W2 = rng.normal()  
         # strength of tendency to base trades on shared history of trades
         # (a +ve W2 means agent prefers to trade when it is "in the red")
+        # keys for the following will be the neighbours for the following dictionaries
+        self.given_val = {}       
+        self.recd_val = {}
 
+        self.blank_memories()
+        
+        self.append_trail()
+
+    def blank_memories(self):
         self.utility_trail = [] # just a record of utility over a season
         self.counts_trail = {x: []  for x in self.world.commodities}
         # that is just a record for each commodity over a season
-        
-        self.append_trail()
+        self.given_val = {nb: 0.0  for nb in self.neighbours}
+        self.recd_val = {nb: 0.0  for nb in self.neighbours}
 
     def __str__(self):
         return self.name
@@ -121,7 +127,7 @@ class Giver:
                                                       self.W2 * (self.recd_val[nb] - self.given_val[nb]))      
             else:
                 for j,nb in enumerate(self.neighbours):
-                    drive[j,i] = 0.00000001 # very hard to give away what don't have!
+                    drive[j,i] = 0.0001 # very hard to give away what don't have!
 
         if verbose: 
             print 'drive is ', drive
@@ -168,7 +174,7 @@ class Giver:
         base_utility = self.get_utility()   
         self.count[commodity]    -= 1
         lost = self.get_utility() - base_utility
-        self.given_val[recipient] -= lost
+        self.given_val[recipient] = self.given_val[recipient] - lost
     
         base_utility = recipient.get_utility()   
         recipient.count[commodity] += 1
