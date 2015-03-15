@@ -13,6 +13,15 @@ from givers import Giver, World
 import pylab as pl
 import sys
 
+def set_init_quantities(ag1, ag2):
+    ag1.set_count('love', 20)  
+    ag1.set_count('respect', 10)        
+    ag1.set_count('backrub', 0)        
+    ag2.set_count('love', 0)        
+    ag2.set_count('respect', 10)        
+    ag2.set_count('backrub', 20)        
+
+
 def run_two_givers(g1, g2, num_gifts, dynamics='alt'):
 
     if dynamics == 'alt':
@@ -31,8 +40,9 @@ def run_two_givers(g1, g2, num_gifts, dynamics='alt'):
         return g1.utility_trail[-1], g2.utility_trail[-1]
     else: 
         sys.exit('Do not know what dynamics to use')
-    
-def display_pair_sequence(g1, g2):
+
+        
+def display_pair_sequence(g1, g2, outfile = 'apair.png'):
     # Display the hell out of it
     pl.clf()
     pl.subplot(3,1,1)
@@ -56,15 +66,28 @@ def display_pair_sequence(g1, g2):
     pl.gca().set_ylim(-0.5,20)
     pl.ylabel(g2.name)
     pl.gca().set_xticks([])
-    pl.savefig('apair.png')
+    pl.savefig(outfile,dpi=200)
+    print 'wrote %s' % (outfile)
+
     
-def set_init_quantities(ag1, ag2):
-    ag1.set_count('love', 20)  
-    ag1.set_count('respect', 10)        
-    ag1.set_count('backrub', 0)        
-    ag2.set_count('love', 0)        
-    ag2.set_count('respect', 10)        
-    ag2.set_count('backrub', 20)        
+def display_utilities_heatmap(displayUtil, outfile = 'utilities.png'):
+    fig = pl.figure()   
+    z_min = np.min(displayUtil.ravel())
+    z_max = np.max(displayUtil.ravel())
+    z_lim = max(abs(z_min), abs(z_max)) # just trying to get white to be zero!!
+    im = pl.imshow(displayUtil, interpolation='nearest', origin='lower', cmap=pl.cm.Spectral, extent=(-5,5,-5,5), vmin=-z_lim, vmax=z_lim)
+    pl.gca().set_title('rel adv util2 vs (w0=%.1f, w1=%.1f, w2=%.1f)' % (g1w0, g1w1, g1w2))
+    pl.gca().set_ylabel('w1 of agent 2')
+    pl.gca().set_xlabel('w2 of agent 2')
+    levels = np.arange(np.min(displayUtil), np.max(displayUtil), 0.5)
+    #CS = pl.contour(displayUtil, levels, origin='lower',
+    #                         linewidths=2, extent=(-5,5,-5,5))
+    #CB = pl.colorbar(CS, shrink=0.8, extend='both') #colorbar for the contours
+    # We can still add a colorbar for the image, too.
+    CBI = pl.colorbar(im, orientation='vertical', shrink=0.8, extend='both')
+
+    pl.savefig(outfile,dpi=200)
+    print 'wrote %s' % (outfile)
 
 
 if __name__ == '__main__':
@@ -108,7 +131,7 @@ if __name__ == '__main__':
         set_init_quantities(g1, g2)
         final_util1, final_util_2 = run_two_givers(g1, g2, 120)
         print final_util1, final_util_2    
-        display_pair_sequence(g1, g2)
+        display_pair_sequence(g1, g2, 'sequences.png')
 
     if SINGLE_TEST == False:   
         # we will test all sorts of weights for the second player.
@@ -134,21 +157,8 @@ if __name__ == '__main__':
                 finalUtil_2[i1,i2] = u2
 
         # show the results as heat-maps or contours
-        fig = pl.figure()   
-        displayUtil = finalUtil_2 - finalUtil_1
-        z_min = np.min(displayUtil.ravel())
-        z_max = np.max(displayUtil.ravel())
-        z_lim = max(abs(z_min), abs(z_max)) # just trying to get white to be zero!!
-        im = pl.imshow(displayUtil, interpolation='nearest', origin='lower', cmap=pl.cm.Spectral, extent=(-5,5,-5,5), vmin=-z_lim, vmax=z_lim)
-        pl.gca().set_title('rel adv util2 vs (w0=%.1f, w1=%.1f, w2=%.1f)' % (g1w0, g1w1, g1w2))
-        pl.gca().set_ylabel('w1 of agent 2')
-        pl.gca().set_xlabel('w2 of agent 2')
-        levels = np.arange(np.min(displayUtil), np.max(displayUtil), 0.5)
-        #CS = pl.contour(displayUtil, levels, origin='lower',
-        #                         linewidths=2, extent=(-5,5,-5,5))
-        #CB = pl.colorbar(CS, shrink=0.8, extend='both') #colorbar for the contours
-        # We can still add a colorbar for the image, too.
-        CBI = pl.colorbar(im, orientation='vertical', shrink=0.8, extend='both')
-        pl.savefig('utilities.png',dpi=200)
+        utilityDiff = finalUtil_2 - finalUtil_1
+        display_utilities_heatmap(finalUtil_1, 'utilities.png')
     
+#------------------------------------------------------
 

@@ -100,13 +100,13 @@ class Giver:
             print '\t %8s: %3d' % (x, self.count[x])
         print '\t utility = %.2f' %(self.get_utility())
         
+
     def do_one_gift(self, temperature = 1.0, verbose=False):
         """Consider giving one of a commodity to one neighbour. Evaluate
         drive to do this for all commodities and all neighbours,
         including a do-nothing option.
 
         Then DO IT (with the give() method)
-
         """
         if verbose: self.display()
         
@@ -120,14 +120,14 @@ class Giver:
             if self.count[c] > 0:
                 self.count[c] -= 1 
                 loss = self.get_utility() - base_utility
-                self.count[c] += 1  # cos it's only a thought expt! 
+                self.count[c] += 1  # because it's only a thought expt! 
                 for j,nb in enumerate(self.neighbours):
                     drive[j,i] = np.exp(self.W0 +
-                                                      self.W1 * loss + 
-                                                      self.W2 * (self.recd_val[nb] - self.given_val[nb]))      
+                                        self.W1 * loss + 
+                                        self.W2 * (self.recd_val[nb] - self.given_val[nb]))      
             else:
                 for j,nb in enumerate(self.neighbours):
-                    drive[j,i] = 0.0001 # very hard to give away what don't have!
+                    drive[j,i] = 0.000001 # very hard to give away what don't have!
 
         if verbose: 
             print 'drive is ', drive
