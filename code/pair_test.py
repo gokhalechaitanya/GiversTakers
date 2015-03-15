@@ -70,21 +70,30 @@ def display_pair_sequence(g1, g2, outfile = 'apair.png'):
     print 'wrote %s' % (outfile)
 
     
-def display_utilities_heatmap(displayUtil, outfile = 'utilities.png'):
+def display_utilities_heatmaps(util1, util2, outfile = 'utilities.png'):
     fig = pl.figure()   
-    z_min = np.min(displayUtil.ravel())
-    z_max = np.max(displayUtil.ravel())
+    z_min = 8.  #np.min(displayUtil.ravel())
+    z_max = -8. #np.max(displayUtil.ravel())
     z_lim = max(abs(z_min), abs(z_max)) # just trying to get white to be zero!!
-    im = pl.imshow(displayUtil, interpolation='nearest', origin='lower', cmap=pl.cm.Spectral, extent=(-5,5,-5,5), vmin=-z_lim, vmax=z_lim)
-    pl.gca().set_title('rel adv util2 vs (w0=%.1f, w1=%.1f, w2=%.1f)' % (g1w0, g1w1, g1w2))
+
+    pl.subplot(221)
+    im = pl.imshow(util1, interpolation='nearest', origin='lower', cmap=pl.cm.Spectral, extent=(-10,10,-10,10), vmin=-z_lim, vmax=z_lim)
+    pl.gca().set_title('utility (ag1 plays w0=%.1f, w1=%.1f, w2=%.1f)' % (g1w0, g1w1, g1w2))
     pl.gca().set_ylabel('w1 of agent 2')
     pl.gca().set_xlabel('w2 of agent 2')
-    levels = np.arange(np.min(displayUtil), np.max(displayUtil), 0.5)
-    #CS = pl.contour(displayUtil, levels, origin='lower',
-    #                         linewidths=2, extent=(-5,5,-5,5))
-    #CB = pl.colorbar(CS, shrink=0.8, extend='both') #colorbar for the contours
-    # We can still add a colorbar for the image, too.
+    #CBI = pl.colorbar(im, orientation='vertical', shrink=0.8, extend='both')
+
+    pl.subplot(222)
+    im = pl.imshow(util2, interpolation='nearest', origin='lower', cmap=pl.cm.Spectral, extent=(-10,10,-10,10), vmin=-z_lim, vmax=z_lim)
+    #CBI = pl.colorbar(im, orientation='vertical', shrink=0.8, extend='both')
+
+    pl.subplot(223)
+    im = pl.imshow(util1-util2, interpolation='nearest', origin='lower', cmap=pl.cm.Spectral, extent=(-10,10,-10,10), vmin=-z_lim, vmax=z_lim)
+
+    pl.subplot(224)
+    pl.gca().axis('off')
     CBI = pl.colorbar(im, orientation='vertical', shrink=0.8, extend='both')
+
 
     pl.savefig(outfile,dpi=200)
     print 'wrote %s' % (outfile)
@@ -125,19 +134,21 @@ if __name__ == '__main__':
         SINGLE_TEST = False
 
     
+    num_steps = 10
+
     if SINGLE_TEST == True:   
         # Do a single run, with those two agents using the supplied weight values.
         print 'Running some gifting here'
         set_init_quantities(g1, g2)
-        final_util1, final_util_2 = run_two_givers(g1, g2, 120)
+        final_util1, final_util_2 = run_two_givers(g1, g2, num_steps)
         print final_util1, final_util_2    
         display_pair_sequence(g1, g2, 'sequences.png')
 
     if SINGLE_TEST == False:   
         # we will test all sorts of weights for the second player.
         print 'Running one against many alternatives and making a plot...'
-        g2w1 = np.linspace(-5., 5, 11)
-        g2w2 = np.linspace(-5., 5, 11)
+        g2w1 = np.linspace(-10., 10, 15)
+        g2w2 = np.linspace(-10., 10, 15)
         X,Y = np.meshgrid(g2w1,g2w2)
         finalUtil_1 = np.zeros(shape=X.shape)
         finalUtil_2 = np.zeros(shape=X.shape)
@@ -151,14 +162,12 @@ if __name__ == '__main__':
                 # And set the "memories" to zero transactions.
                 g1.blank_memories()
                 g2.blank_memories()
-
-                u1, u2 = run_two_givers(g1, g2, 120)
+                u1, u2 = run_two_givers(g1, g2, num_steps)
                 finalUtil_1[i1,i2] = u1
                 finalUtil_2[i1,i2] = u2
 
         # show the results as heat-maps or contours
-        utilityDiff = finalUtil_2 - finalUtil_1
-        display_utilities_heatmap(finalUtil_1, 'utilities.png')
+        display_utilities_heatmaps(finalUtil_1, finalUtil_2, 'utilities_%d.png' % (num_steps))
     
 #------------------------------------------------------
 
