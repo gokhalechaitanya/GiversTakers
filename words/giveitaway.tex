@@ -12,10 +12,30 @@ whoa, the whole thing's really an abstract, I think.
 \end{abstract}
 
 \section{setup}
+
 \begin{itemize}
  \item thing1
  \item thing2
 \end{itemize}
 
+World has $M$ distinct ``commodities'' $A, B, \ldots, X$.
+
+Agents in a network. 
+
+The $i^\text{th}$ agent has some number of each commodity, stored as a
+vector of counts $\mathbf{n}^i = (n^i_A, n^i_B \ldots )$ with integer
+$n^i_X \geq 0$.
+
+The utility for the $i^\text{th}$ agent $U^i = U(\mathbf{n}^i)$. More is good, so this should be monotonically increasing.
+But it should ``roll over'' at high counts. I am currently using 
+\[
+U(\mathbf{n}) = \sum_X \log n_X
+\]
+which means all commodities are ``essential'', since this diverges at
+zero.  All commodities weight equally in this form - there are no
+``valuables'' as such.
+
+Each agent makes decisions about which of its neighbours it gifts, and
+which commodity is used as a gift.
 
 \end{document}
