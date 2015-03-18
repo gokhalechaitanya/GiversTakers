@@ -63,8 +63,12 @@ class Giver:
         return the utility to this agent of having the current commodity counts
         """
         util = 0.0
+        wee = 0.001 # perhaps having none is horrible but not fatal.
         for c in self.world.commodities:
-            util += np.log(0.0000000001 + self.count[c])  # for example....
+            if self.count[c] >= 0:
+                util += np.log(wee + self.count[c])  # for example....
+            else:
+                util += np.log(wee*wee)  # even worse to give away what you don't even have!
         return util 
 
     def get_lookahead_utilities(self, incr=0):
@@ -77,6 +81,7 @@ class Giver:
             # calc the util if this commod is altered by incr.
             self.count[c] += incr  # DO the thought experiment!
             utils[c] = self.get_utility()
+            #print c, utils[c], self.count[c]
             mean += utils[c]
             self.count[c] -= incr  # UNDO the thought experiment!
         mean = mean / len(self.world.commodities)
