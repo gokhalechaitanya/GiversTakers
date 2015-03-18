@@ -8,69 +8,62 @@ Created on Mon Mar  9 14:15:03 2015
 import numpy as np
 import numpy.random as rng
 import networkx as nx
-np.set_printoptions(precision=2)
-from givers import Giver, World
 import pylab as pl
-import sys
-
-def set_init_quantities(ag1, ag2):
-    ag1.set_count('love', 20)  
-    ag1.set_count('respect', 1)        
-    ag1.set_count('backrub', 0)        
-    ag2.set_count('love', 0)        
-    ag2.set_count('respect', 1)        
-    ag2.set_count('backrub', 20)        
+import sys, argparse
+from givers import Giver, World
+np.set_printoptions(precision=2)
 
 
-def run_two_givers(g1, g2, num_gifts, dynamics='alt'):
+
+def run_two_givers(playerA, playerB, num_gifts, dynamics='alt'):
 
     if dynamics == 'alt':
-        g1.utility_trail = []
-        g2.utility_trail = []
+        playerA.utility_trail = []
+        playerB.utility_trail = []
         
         for t in range(num_gifts):
-            # g1 does a gifting!
-            g1.do_one_gift(verbose=False)
-            g1.append_trail()
-            g2.append_trail()
-            # g2 does a gifting!
-            g2.do_one_gift(verbose=False)
-            g2.append_trail()
-            g1.append_trail()
-        return g1.utility_trail[-1], g2.utility_trail[-1]
+            # playerA does a gifting!
+            playerA.do_one_gift(verbose=False)
+            playerA.append_trail()
+            playerB.append_trail()
+            # playerB does a gifting!
+            playerB.do_one_gift(verbose=False)
+            playerB.append_trail()
+            playerA.append_trail()
+        return playerA.utility_trail[-1], playerB.utility_trail[-1]
     else: 
         sys.exit('Do not know what dynamics to use')
 
         
-def display_pair_sequence(g1, g2, outfile = 'apair.png'):
+def display_pair_sequence(playerA, playerB, outfile = 'apair.png'):
     # Display the hell out of it
     pl.clf()
     pl.subplot(3,1,1)
-    pl.plot(g1.utility_trail,'s-k')
-    pl.plot(g2.utility_trail,'o-k', markerfacecolor='white')
+    pl.plot(playerA.utility_trail,'s-k')
+    pl.plot(playerB.utility_trail,'o-k', markerfacecolor='white')
     pl.title('utilities over time')
-    big1 = np.max(g1.utility_trail)
-    big2 = np.max(g2.utility_trail)
-    biggest = max(big1, big2)
+    biplayerA = np.max(playerA.utility_trail)
+    biplayerB = np.max(playerB.utility_trail)
+    biggest = max(biplayerA, biplayerB)
     pl.gca().set_ylim(-0.5, biggest + .5)
     pl.subplot(3,1,2)
     for x in world.commodities:
-        pl.plot(g1.counts_trail[x],'-s', alpha=.5, label = x)
+        pl.plot(playerA.counts_trail[x],'-s', alpha=.5, label = x)
     pl.gca().set_ylim(-0.5,20)
-    pl.ylabel(g1.name)
+    pl.ylabel(playerA.name)
     pl.gca().set_xticks([])
     l = pl.legend()
     pl.subplot(3,1,3)
     for x in world.commodities:
-        pl.plot(g2.counts_trail[x],'-o', alpha=.5, label = x)
+        pl.plot(playerB.counts_trail[x],'-o', alpha=.5, label = x)
     pl.gca().set_ylim(-0.5,20)
-    pl.ylabel(g2.name)
+    pl.ylabel(playerB.name)
     pl.gca().set_xticks([])
     pl.savefig(outfile,dpi=200)
     print 'wrote %s' % (outfile)
 
     
-def display_utilities_heatmaps(util1, util2, outfile = 'utilities.png'):
+def display_utilities_heatmaps(util1, util2, args, outfile = 'utilities.png'):
     fig = pl.figure()   
     z_min = 8.  #np.min(displayUtil.ravel())
     z_max = -8. #np.max(displayUtil.ravel())
@@ -78,7 +71,7 @@ def display_utilities_heatmaps(util1, util2, outfile = 'utilities.png'):
 
     pl.subplot(221) # top left is Agent 1's utility, for various Agent 2 strategies
     im = pl.imshow(util1, interpolation='nearest', origin='lower', cmap=pl.cm.Spectral, extent=(-10,10,-10,10), vmin=-z_lim, vmax=z_lim)
-    pl.gca().set_title('utility (ag1 plays w0=%.1f, w1=%.1f, w2=%.1f)' % (g1w0, g1w1, g1w2))
+    pl.gca().set_title('utility. aplayerA plays ') # + args.Aweights)
     pl.gca().set_ylabel('w1 of agent 2')
     pl.gca().set_xlabel('w2 of agent 2')
     #CBI = pl.colorbar(im, orientation='vertical', shrink=0.8, extend='both')
@@ -101,73 +94,84 @@ def display_utilities_heatmaps(util1, util2, outfile = 'utilities.png'):
 
 if __name__ == '__main__':
 
-    world = World(commodities=['love', 'respect', 'backrub'])
-    g1 = Giver(world, 'Jim')
-    g2 = Giver(world, 'Bob')
-    g1.add_neighbour(g2)
-    g2.add_neighbour(g1)
-    world.add_node(g1)
-    world.add_node(g2)
 
-    """
-    w0 = 10.0    # if +ve, agent never wants to PASS
-    w1 = 100.0  # if +ve, agent gives away least valuable first
-    w2 = 6.0      # if +ve, agent wants to give when other has given more.
-    """
-    print "num args is ", len(sys.argv)
-    if len(sys.argv) < 4:
-        sys.exit('usage: python %s  w0 w1 w2 for giver A  [w0 w1 w2 for giver B]' % (sys.argv[0]))
-    elif len(sys.argv) >= 4:
-        g1w0 = float(sys.argv[1])
-        g1w1 = float(sys.argv[2])
-        g1w2 = float(sys.argv[3])
-        g1.set_weights(g1w0, g1w1, g1w2)
-        g1.display()
-    if len(sys.argv) == 7:
+    parser = argparse.ArgumentParser(description="test out two donors")
+
+    parser.add_argument("-t", "--num_steps", help="number of steps", type=int,
+                         default=10)
+    parser.add_argument("--verbose", help="use verbose output",
+                        action="store_true")
+    parser.add_argument('-A', '--Aweights', nargs='+', type=float, help='weights for agent B', required='True')
+    parser.add_argument('-B','--Bweights', nargs='+', type=float, help='weights for agent B')
+
+
+    world = World(commodities=['love', 'respect', 'backrub'])
+    playerA = Giver(world, 'Jim')
+    playerB = Giver(world, 'Bob')
+    playerA.add_neighbour(playerB)
+    playerB.add_neighbour(playerA)
+    world.add_node(playerA)
+    world.add_node(playerB)
+
+
+    args = parser.parse_args()
+    print args.num_steps
+    if args.verbose:
+        print "verbosity turned on"
+
+    playerA.set_weights(args.Aweights)
+    playerA.display()
+    SINGLE_TEST = False
+    if args.Bweights:
+        print "yeow! B is ", args.Bweights
         SINGLE_TEST = True
-        g2w0 = float(sys.argv[4])
-        g2w1 = float(sys.argv[5])
-        g2w2 = float(sys.argv[6])
-        g2.set_weights(g2w0, g2w1, g2w2)
-        g2.display()
-    else:
-        SINGLE_TEST = False
+        playerB.set_weights(args.Bweights)
+        playerB.display()
+
+
+    # w0 = 10.0    # if +ve, agent never wants to PASS
+    # w1 = 100.0  # if +ve, agent gives away least valuable first
+    # w2 = 6.0      # if +ve, agent wants to give when other has given more.
+
 
     
-    num_steps = 10
-
+    
+    playerA.set_counts( dict(zip(world.commodities, [20,1,0])))
+    playerB.set_counts( dict(zip(world.commodities, [0,1,20])))
+    
     if SINGLE_TEST == True:   
         # Do a single run, with those two agents using the supplied weight values.
         print 'Running some gifting here'
-        set_init_quantities(g1, g2)
-        final_util1, final_util_2 = run_two_givers(g1, g2, num_steps)
+        final_util1, final_util_2 = run_two_givers(playerA, playerB, args.num_steps)
         print final_util1, final_util_2    
-        display_pair_sequence(g1, g2, 'sequences.png')
+        display_pair_sequence(playerA, playerB, 'sequences.png')
 
     if SINGLE_TEST == False:   
         # we will test all sorts of weights for the second player.
         print 'Running one against many alternatives and making a plot...'
-        g2w1 = np.linspace(-10., 10, 25)
-        g2w2 = np.linspace(-10., 10, 25)
-        X,Y = np.meshgrid(g2w1,g2w2)
+        playerBw1 = np.linspace(-10., 10, 25)
+        playerBw2 = np.linspace(-10., 10, 25)
+        X,Y = np.meshgrid(playerBw1,playerBw2)
         finalUtil_1 = np.zeros(shape=X.shape)
         finalUtil_2 = np.zeros(shape=X.shape)
-        for i1,val1 in enumerate(g2w1):
-            for i2,val2 in enumerate(g2w2):
+        for i1,val1 in enumerate(playerBw1):
+            for i2,val2 in enumerate(playerBw2):
                 
-                g2.set_weights(g1w0, val1, val2)  # NOTE: uses same w0 as Agent 1.
+                playerB.set_weights([playerA.W0, val1, val2])  # NOTE: uses same w0 as Agent 1.
                 # Reset the initial quantities to be unequal.
-                set_init_quantities(g1, g2)
+                playerA.set_counts( dict(zip(world.commodities, [20,1,0])))
+                playerB.set_counts( dict(zip(world.commodities, [0,1,20])))
+
             
                 # And set the "memories" to zero transactions.
-                g1.blank_memories()
-                g2.blank_memories()
-                u1, u2 = run_two_givers(g1, g2, num_steps)
+                playerA.blank_memories()
+                playerB.blank_memories()
+                u1, u2 = run_two_givers(playerA, playerB, args.num_steps)
                 finalUtil_1[i1,i2] = u1
                 finalUtil_2[i1,i2] = u2
 
         # show the results as heat-maps or contours
-        display_utilities_heatmaps(finalUtil_1, finalUtil_2, 'utilities_%d.png' % (num_steps))
+        display_utilities_heatmaps(finalUtil_1, finalUtil_2, args, 'utilities_%d.png' % (args.num_steps))
     
 #------------------------------------------------------
 

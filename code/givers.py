@@ -112,10 +112,18 @@ class Giver:
     def set_count(self, commodity, i): 
         self.count[commodity] = i
 
-    def set_weights(self, w0, w1, w2): 
-        self.W0 = w0
-        self.W1 = w1
-        self.W2 = w2
+    def set_counts(self, dict_commods):
+        """ 
+        takes a dict of commodity counts and uses it to 
+        set this agent's counts.
+        """
+        for c in dict_commods.keys():
+            self.count[c] = dict_commods[c]
+
+    def set_weights(self, w): 
+        self.W0 = w[0]
+        self.W1 = w[1]
+        self.W2 = w[2]
 
     def display(self):
         print '--------------------------------------------'
