@@ -46,11 +46,10 @@ class Giver:
 
         self.blank_memories()
         
-        self.append_trail()
 
     def blank_memories(self):
         self.utility_trail = [] # just a record of utility over a season
-        self.counts_trail = {x: []  for x in self.world.commodities}
+        self.counts_trail = {c: []  for c in self.world.commodities}
         # that is just a record for each commodity over a season
         self.given_val = {nb: 0.0  for nb in self.neighbours}
         self.recd_val = {nb: 0.0  for nb in self.neighbours}
@@ -63,12 +62,12 @@ class Giver:
         return the utility to this agent of having the current commodity counts
         """
         util = 0.0
-        wee = 0.001 # perhaps having none is horrible but not fatal.
+        wee = 1.001 # perhaps having none is horrible but not fatal.
         for c in self.world.commodities:
             if self.count[c] >= 0:
-                util += np.log(wee + self.count[c])  # for example....
+                util += np.log2(wee + self.count[c])  # for example....
             else:
-                util += np.log(wee*wee)  # even worse to give away what you don't even have!
+                util += np.log2(wee)  # even worse to give away what you don't even have!
         return util 
 
     def get_lookahead_utilities(self, incr=0):
@@ -98,8 +97,8 @@ class Giver:
 
     def append_trail(self):
         self.utility_trail.append(self.get_utility())
-        for x in self.world.commodities:
-            self.counts_trail[x].append(self.count[x])
+        for c in self.world.commodities:
+            self.counts_trail[c].append(self.count[c])
                 
     def add_neighbour(self, new_neighbour):
         if (new_neighbour in self.neighbours) or (new_neighbour.name == self.name):

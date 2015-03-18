@@ -15,10 +15,10 @@ import sys
 
 def set_init_quantities(ag1, ag2):
     ag1.set_count('love', 20)  
-    ag1.set_count('respect', 10)        
+    ag1.set_count('respect', 1)        
     ag1.set_count('backrub', 0)        
     ag2.set_count('love', 0)        
-    ag2.set_count('respect', 10)        
+    ag2.set_count('respect', 1)        
     ag2.set_count('backrub', 20)        
 
 
@@ -134,7 +134,7 @@ if __name__ == '__main__':
         SINGLE_TEST = False
 
     
-    num_steps = 25
+    num_steps = 10
 
     if SINGLE_TEST == True:   
         # Do a single run, with those two agents using the supplied weight values.
@@ -147,8 +147,8 @@ if __name__ == '__main__':
     if SINGLE_TEST == False:   
         # we will test all sorts of weights for the second player.
         print 'Running one against many alternatives and making a plot...'
-        g2w1 = np.linspace(-10., 10, 15)
-        g2w2 = np.linspace(-10., 10, 15)
+        g2w1 = np.linspace(-10., 10, 25)
+        g2w2 = np.linspace(-10., 10, 25)
         X,Y = np.meshgrid(g2w1,g2w2)
         finalUtil_1 = np.zeros(shape=X.shape)
         finalUtil_2 = np.zeros(shape=X.shape)
