@@ -64,8 +64,32 @@ class Giver:
         """
         util = 0.0
         for c in self.world.commodities:
-            util += np.log(1 + self.count[c])  # for example....
+            util += np.log(0.0000000001 + self.count[c])  # for example....
         return util 
+
+    def get_lookahead_utilities(self, incr=0):
+        """ returns a dict with commodities as keys, and the post-gifting utility that 
+            will follow if that commodity is incremented by incr.
+            Incr will be -1 if self if giving, and +1 if it is being given to. """
+        utils = {}
+        mean = 0.0
+        for c in self.world.commodities:
+            # calc the util if this commod is altered by incr.
+            self.count[c] += incr  # DO the thought experiment!
+            utils[c] = self.get_utility()
+            mean += utils[c]
+            self.count[c] -= incr  # UNDO the thought experiment!
+        mean = mean / len(self.world.commodities)
+        return utils, mean
+
+    def get_nbr_histories(self): # returns a dict over neighbours
+        nbr_history = {}
+        mean = 0.0
+        for nb in self.neighbours:
+            nbr_history[nb] = self.recd_val[nb] - self.given_val[nb]
+            mean += nbr_history[nb]
+        mean = mean/len(self.neighbours)
+        return nbr_history, mean        
 
     def append_trail(self):
         self.utility_trail.append(self.get_utility())
@@ -101,47 +125,67 @@ class Giver:
         print '\t utility = %.2f' %(self.get_utility())
         
 
-    def do_one_gift(self, temperature = 1.0, verbose=False):
+
+        
+        
+    def do_one_gift(self, verbose=False):
         """Consider giving one of a commodity to one neighbour. Evaluate
         drive to do this for all commodities and all neighbours,
         including a do-nothing option.
 
         Then DO IT (with the give() method)
         """
-        if verbose: self.display()
+        gift = self.decide_gift(self, verbose = False)
+        if gift != None:
+            c, nb = gift
+            self.give(c, nb) # GIVE IT!
+            if verbose: 
+                self.display()
+                nbr.display()
+
+    def decide_gift(self, temperature = 1.0, verbose = False):
+        """
+        #    calc the one_unit_loss for each commodity. (nb: -inf if count is zero)
+        #    ie. a function returning a vector of the utilities following each case.
+        #    Then subtract the original to get the loss.
+        #    Then make the mean of this zero? (just helps interpretation of W1 is all).
+        #
+        #    calc the "history" value for each neighbour (function returning a value)
+        #
+        #    form matrix of "desires" to gift X to i etc.
+        #    choose one with prob.
+        #    compare that one against "drive" to do nothing (=0).
+        #    Make that second stochastic choice.
+        #
+        #    return the choice as tuple (commodity, neighbour), or None if there's no gift.
+       """ 
+
+        # Jump out immediately if gifting is impossible.        
+        if (np.sum(list(self.count.values())) == 0) or (self.neighbours == None): 
+            return None  # no gift even possible!
         
-        #%% first we decide what to do
-        #print 'CHECK: %d nbrs and %d commods' % (len(self.neighbours), len(self.world.commodities))
+        # get the info together...
+        #base_utility = self.get_utility()
+        lookahead_util, mean_la_util = self.get_lookahead_utilities(-1) # returns a dict over commodities
+        nbr_history, mean_history = self.get_nbr_histories() # returns a dict over neighbours
+
+        # form a matrix of "desires" to give X to i, etc.
         drive = np.zeros(shape=(len(self.neighbours), len(self.world.commodities)), dtype=float)
-        base_utility = self.get_utility()   
-        for i,c in enumerate(self.world.commodities):
-            # eval the drive to give this c to this nb.
-            # Thought experiment: "what if I gave c away to nb?"
-            if self.count[c] > 0:
-                self.count[c] -= 1 
-                loss = self.get_utility() - base_utility
-                self.count[c] += 1  # because it's only a thought expt! 
-                for j,nb in enumerate(self.neighbours):
-                    drive[j,i] = np.exp(self.W0 +
-                                        self.W1 * loss + 
-                                        self.W2 * (self.recd_val[nb] - self.given_val[nb]))      
-            else:
-                for j,nb in enumerate(self.neighbours):
-                    drive[j,i] = 0.000001 # very hard to give away what don't have!
-
-        if verbose: 
-            print 'drive is ', drive
-        total_drive = np.sum(np.ravel(drive))
-
+        for row, nb in enumerate(self.neighbours):
+            for col, c in enumerate(self.world.commodities):
+                drive[row, col] = np.exp(self.W0 +
+                                         self.W1 * (lookahead_util[c] - mean_la_util) + 
+                                         self.W2 * nbr_history[nb]
+                                         )     
         if verbose: 
             print '#### %s considers gifting ' % (self.name), self.world.commodities
             for j,nb in enumerate(self.neighbours):
                 print '#### to %5s (drive) :' %(nb),
                 print drive[j,:]
                 print '#### to %5s (cumPr) :' %(nb),
-                print prob #cumulativeProb.reshape(drive.shape)[j,:]
 
         # First decision: if do something what would it be?
+        total_drive = np.sum(np.ravel(drive))
         prob = drive / total_drive
         cumulativeProb = np.cumsum(prob)
         # choose an action with probability proportional to the normalised will.
@@ -150,21 +194,17 @@ class Giver:
         drive_of_chosen_act = drive[nbr_index, commod_index]
 
         # 2nd decision: do you want to do that, versus do nothing?
-        drive_of_noaction = np.exp(1.)
+        drive_of_noaction = 1.0 # ie. exp(0).
         fraction = drive_of_noaction / (drive_of_noaction + drive_of_chosen_act)
         if rng.random() <  fraction:   # do nothing
-            if verbose: print '#### best to PASS: %.2f better than %.2f' %(drive_of_noaction, drive_of_chosen_act)
+            if verbose: print '#### decided to PASS'
+            return None # could have gifted, but decided not to.
         else:
             nbr = self.neighbours[nbr_index]
             commod = self.world.commodities[commod_index]
             if verbose: print '#### (%.2f) Choice: give %s to %s' % (r, commod, nbr)
-                
-            self.give(commod, nbr) # GIVE IT!
-
-            if verbose: 
-                self.display()
-                nbr.display()
-
+            return commod, nbr
+            
 
     def give(self, commodity, recipient):
         """ Give a specific commodity to a specific trader """
@@ -213,7 +253,7 @@ class World:
             # do one round of all traders, in a random order
             for i in rng.permutation(len(self.givers)):
                 tr = self.givers[i]
-                tr.do_one_gift(1.0, verbose)
+                tr.do_one_gift(verbose)
                 tr.append_trail()
     
     def adapt_all_traders():

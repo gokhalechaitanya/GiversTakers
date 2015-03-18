@@ -30,11 +30,11 @@ def run_two_givers(g1, g2, num_gifts, dynamics='alt'):
         
         for t in range(num_gifts):
             # g1 does a gifting!
-            g1.do_one_gift(temperature=1.0, verbose=False)
+            g1.do_one_gift(verbose=False)
             g1.append_trail()
             g2.append_trail()
             # g2 does a gifting!
-            g2.do_one_gift(temperature=1.0, verbose=False)
+            g2.do_one_gift(verbose=False)
             g2.append_trail()
             g1.append_trail()
         return g1.utility_trail[-1], g2.utility_trail[-1]
@@ -76,18 +76,18 @@ def display_utilities_heatmaps(util1, util2, outfile = 'utilities.png'):
     z_max = -8. #np.max(displayUtil.ravel())
     z_lim = max(abs(z_min), abs(z_max)) # just trying to get white to be zero!!
 
-    pl.subplot(221)
+    pl.subplot(221) # top left is Agent 1's utility, for various Agent 2 strategies
     im = pl.imshow(util1, interpolation='nearest', origin='lower', cmap=pl.cm.Spectral, extent=(-10,10,-10,10), vmin=-z_lim, vmax=z_lim)
     pl.gca().set_title('utility (ag1 plays w0=%.1f, w1=%.1f, w2=%.1f)' % (g1w0, g1w1, g1w2))
     pl.gca().set_ylabel('w1 of agent 2')
     pl.gca().set_xlabel('w2 of agent 2')
     #CBI = pl.colorbar(im, orientation='vertical', shrink=0.8, extend='both')
 
-    pl.subplot(222)
+    pl.subplot(222) # top right is Agent 2's utility, for various Agent 2 strategies
     im = pl.imshow(util2, interpolation='nearest', origin='lower', cmap=pl.cm.Spectral, extent=(-10,10,-10,10), vmin=-z_lim, vmax=z_lim)
     #CBI = pl.colorbar(im, orientation='vertical', shrink=0.8, extend='both')
 
-    pl.subplot(223)
+    pl.subplot(223) # the relative advantage of Agent 1 over Agent 2.
     im = pl.imshow(util1-util2, interpolation='nearest', origin='lower', cmap=pl.cm.Spectral, extent=(-10,10,-10,10), vmin=-z_lim, vmax=z_lim)
 
     pl.subplot(224)
@@ -134,7 +134,7 @@ if __name__ == '__main__':
         SINGLE_TEST = False
 
     
-    num_steps = 10
+    num_steps = 25
 
     if SINGLE_TEST == True:   
         # Do a single run, with those two agents using the supplied weight values.
