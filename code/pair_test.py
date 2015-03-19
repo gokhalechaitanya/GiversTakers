@@ -14,7 +14,6 @@ from givers import Giver, World
 np.set_printoptions(precision=2)
 
 
-
 def run_two_givers(playerA, playerB, num_gifts, dynamics='alt'):
 
     if dynamics == 'alt':
@@ -70,18 +69,18 @@ def display_utilities_heatmaps(util1, util2, args, outfile = 'utilities.png'):
     z_lim = max(abs(z_min), abs(z_max)) # just trying to get white to be zero!!
 
     pl.subplot(221) # top left is Agent 1's utility, for various Agent 2 strategies
-    im = pl.imshow(util1, interpolation='nearest', origin='lower', cmap=pl.cm.Spectral, extent=(-10,10,-10,10), vmin=-z_lim, vmax=z_lim)
-    pl.gca().set_title('utility. aplayerA plays ') # + args.Aweights)
-    pl.gca().set_ylabel('w1 of agent 2')
-    pl.gca().set_xlabel('w2 of agent 2')
+    im = pl.imshow(util1.transpose(), interpolation='nearest', origin='lower', cmap=pl.cm.Spectral, extent=(-10,10,-10,10), vmin=-z_lim, vmax=z_lim)
+    pl.gca().set_title('utility. playerA plays ' + str(playerA.get_weights())) # + args.Aweights)
+    pl.gca().set_ylabel('w2 of agent 2')
+    pl.gca().set_xlabel('w1 of agent 2')
     #CBI = pl.colorbar(im, orientation='vertical', shrink=0.8, extend='both')
 
     pl.subplot(222) # top right is Agent 2's utility, for various Agent 2 strategies
-    im = pl.imshow(util2, interpolation='nearest', origin='lower', cmap=pl.cm.Spectral, extent=(-10,10,-10,10), vmin=-z_lim, vmax=z_lim)
+    im = pl.imshow(util2.transpose(), interpolation='nearest', origin='lower', cmap=pl.cm.Spectral, extent=(-10,10,-10,10), vmin=-z_lim, vmax=z_lim)
     #CBI = pl.colorbar(im, orientation='vertical', shrink=0.8, extend='both')
 
     pl.subplot(223) # the relative advantage of Agent 1 over Agent 2.
-    im = pl.imshow(util1-util2, interpolation='nearest', origin='lower', cmap=pl.cm.Spectral, extent=(-10,10,-10,10), vmin=-z_lim, vmax=z_lim)
+    im = pl.imshow((util1-util2).transpose(), interpolation='nearest', origin='lower', cmap=pl.cm.Spectral, extent=(-10,10,-10,10), vmin=-z_lim, vmax=z_lim)
 
     pl.subplot(224)
     pl.gca().axis('off')
@@ -112,6 +111,8 @@ if __name__ == '__main__':
     playerB.add_neighbour(playerA)
     world.add_node(playerA)
     world.add_node(playerB)
+    playerA.set_counts( dict(zip(world.commodities, [20,1,0])))
+    playerB.set_counts( dict(zip(world.commodities, [0,1,20])))
 
 
     args = parser.parse_args()
@@ -134,11 +135,6 @@ if __name__ == '__main__':
     # w2 = 6.0      # if +ve, agent wants to give when other has given more.
 
 
-    
-    
-    playerA.set_counts( dict(zip(world.commodities, [20,1,0])))
-    playerB.set_counts( dict(zip(world.commodities, [0,1,20])))
-    
     if SINGLE_TEST == True:   
         # Do a single run, with those two agents using the supplied weight values.
         print 'Running some gifting here'
@@ -157,7 +153,7 @@ if __name__ == '__main__':
         for i1,val1 in enumerate(playerBw1):
             for i2,val2 in enumerate(playerBw2):
                 
-                playerB.set_weights([playerA.W0, val1, val2])  # NOTE: uses same w0 as Agent 1.
+                playerB.set_weights([playerA.W[0], val1, val2])  # NOTE: uses same w0 as Agent 1.
                 # Reset the initial quantities to be unequal.
                 playerA.set_counts( dict(zip(world.commodities, [20,1,0])))
                 playerB.set_counts( dict(zip(world.commodities, [0,1,20])))

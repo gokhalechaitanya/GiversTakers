@@ -16,43 +16,32 @@ np.set_printoptions(precision=2)
 
 #%% ----------- start of Giver class definition ------------------------------------------
 class Giver:
+
     def __init__(self, world, name, start_counts=None):
         self.world = world # the world this agent lives within.        
         self.name = name
-        #self.count =  rng.randint(1,10, size=len(    self.world.commodities))
-        #vals = rng.dirichlet(3.0*np.ones(len(self.world.commodities)))
-        # I like this as I can do inheritance of "similar" values
-        # easily: use scaled up "parent" vals as the alpha!
         if start_counts is None:
             self.count = {x: rng.randint(0,5)  for x in self.world.commodities}            
         else:
             self.count = start_counts        
             
+        self.W = rng.normal(3)  -0.5
+        # W[0]: strength of tendency to PASS (avoid gifting at all)
+        # W[1]: strength of tendency to base trades on the value being given away
+        #            (a +ve W1 means agent prefers low-loss trades)
+        # W[2]: strength of tendency to base trades on shared history of trades
+        #            (a +ve W2 means agent prefers to trade when it is "in the red")
         self.neighbours = []
-
-        self.W0 = rng.normal()  
-        # strength of tendency to PASS (avoid gifting at all)
-
-        self.W1 = rng.normal()  
-        # strength of tendency to base trades on the value being given away
-        # (a +ve W1 means agent prefers low-loss trades)
-
-        self.W2 = rng.normal()  
-        # strength of tendency to base trades on shared history of trades
-        # (a +ve W2 means agent prefers to trade when it is "in the red")
-        # keys for the following will be the neighbours for the following dictionaries
-        self.given_val = {}       
+        self.count = {}
+        self.given_val = {}           # keys will be the neighbours for the following dictionaries
         self.recd_val = {}
-
         self.blank_memories()
-        
 
     def blank_memories(self):
-        self.utility_trail = [] # just a record of utility over a season
-        self.counts_trail = {c: []  for c in self.world.commodities}
-        # that is just a record for each commodity over a season
         self.given_val = {nb: 0.0  for nb in self.neighbours}
         self.recd_val = {nb: 0.0  for nb in self.neighbours}
+        self.utility_trail = [] # just a record of utility over a season
+        self.counts_trail = {c: []  for c in self.world.commodities}  # record for each commodity over a season
 
     def __str__(self):
         return self.name
@@ -120,24 +109,25 @@ class Giver:
         for c in dict_commods.keys():
             self.count[c] = dict_commods[c]
 
+    def get_counts(self):
+        return self.count
+
     def set_weights(self, w): 
-        self.W0 = w[0]
-        self.W1 = w[1]
-        self.W2 = w[2]
+        self.W = w
+
+    def get_weights(self): 
+        return self.W
 
     def display(self):
         print '--------------------------------------------'
         print 'Giver ', self.name
         print '\t neighbours: ' % (self.neighbours)
-        print '\t W0,W1,W2 : %.2f, %.2f, %.2f' %(self.W0, self.W1, self.W2)
+        print '\t W: ' +  str(self.get_weights())
         for nb in self.neighbours:
             print '\t with %5s: gave %.2f, recd %.2f' % (nb, self.given_val[nb], self.recd_val[nb])
         for x in self.world.commodities:
             print '\t %8s: %3d' % (x, self.count[x])
         print '\t utility = %.2f' %(self.get_utility())
-        
-
-
         
         
     def do_one_gift(self, verbose=False):
@@ -185,9 +175,9 @@ class Giver:
         drive = np.zeros(shape=(len(self.neighbours), len(self.world.commodities)), dtype=float)
         for row, nb in enumerate(self.neighbours):
             for col, c in enumerate(self.world.commodities):
-                drive[row, col] = np.exp(self.W0 +
-                                         self.W1 * (lookahead_util[c] - mean_la_util) + 
-                                         self.W2 * nbr_history[nb]
+                drive[row, col] = np.exp(self.W[0] +
+                                         self.W[1] * (lookahead_util[c] - mean_la_util) + 
+                                         self.W[2] * nbr_history[nb]
                                          )     
         if verbose: 
             print '#### %s considers gifting ' % (self.name), self.world.commodities
