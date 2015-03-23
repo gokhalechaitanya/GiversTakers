@@ -51,7 +51,7 @@ class Giver:
         return the utility to this agent of having the current commodity counts
         """
         util = 0.0
-        wee = 1.001 # perhaps having none is horrible but not fatal.
+        wee = 0.001 # perhaps having none is horrible but not fatal.
         for c in self.world.commodities:
             if self.count[c] >= 0:
                 util += np.log2(wee + self.count[c])  # for example....
@@ -120,30 +120,31 @@ class Giver:
 
     def display(self):
         print '--------------------------------------------'
-        print 'Giver ', self.name
-        print '\t neighbours: ' % (self.neighbours)
-        print '\t W: ' +  str(self.get_weights())
+        print 'Giver ', self.name,
+        #print ' has neighbours ', [nb.name for nb in self.neighbours]
+
+        print '\t  W: ' +  str(self.get_weights())
+        for x in self.world.commodities:
+            print '\t %10s: %3d' % (x, self.count[x])
+        print '\t    utility: %.2f' %(self.get_utility())
         for nb in self.neighbours:
             print '\t with %5s: gave %.2f, recd %.2f' % (nb, self.given_val[nb], self.recd_val[nb])
-        for x in self.world.commodities:
-            print '\t %8s: %3d' % (x, self.count[x])
-        print '\t utility = %.2f' %(self.get_utility())
         
         
     def do_one_gift(self, verbose=False):
         """Consider giving one of a commodity to one neighbour. Evaluate
         drive to do this for all commodities and all neighbours,
         including a do-nothing option.
-
-        Then DO IT (with the give() method)
+        Then hand it over with the give() method.
         """
         gift = self.decide_gift(self, verbose = False)
         if gift != None:
             c, nb = gift
             self.give(c, nb) # GIVE IT!
-            if verbose: 
+            if verbose:
+                print '\n>>>> %s gifts %s to %s, after which we have:' % (self.name,c,nb.name)
                 self.display()
-                nbr.display()
+                nb.display()
 
     def decide_gift(self, temperature = 1.0, verbose = False):
         """
@@ -204,6 +205,8 @@ class Giver:
         else:
             nbr = self.neighbours[nbr_index]
             commod = self.world.commodities[commod_index]
+            if self.count[commod] <= 0:
+                return None
             if verbose: print '#### (%.2f) Choice: give %s to %s' % (r, commod, nbr)
             return commod, nbr
             
