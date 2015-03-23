@@ -14,23 +14,20 @@ from givers import Giver, World
 np.set_printoptions(precision=2)
 
 
-def run_two_givers(playerA, playerB, num_gifts):
+def run_two_givers(playA, playB, num_gifts):
     # Blank all memory of previous transactions
-    playerA.blank_memories()
-    playerB.blank_memories()
+    playA.blank_memories()
+    playB.blank_memories()
 
     for t in range(num_gifts):
         if rng.random() > 0.5:
-            agent, otheragent = playerA, playerB
+            playA.do_one_gift(verbose=args.verbose)
         else:
-            agent, otheragent = playerB, playerA
+            playB.do_one_gift(verbose=args.verbose)
+        playA.append_trail()
+        playB.append_trail()
 
-        agent.do_one_gift(verbose=args.verbose)
-
-        agent.append_trail()
-        otheragent.append_trail()
-
-    return playerA.utility_trail[-1], playerB.utility_trail[-1]
+    return playA.utility_trail[-1],  playB.utility_trail[-1]
 
         
 def display_pair_sequence(playerA, playerB, outfile = 'apair.png'):
@@ -84,7 +81,7 @@ def display_utilities_heatmaps(wlim, util1, util2, args, outfile = 'utilities.pn
     im = pl.imshow(util2.transpose(), interpolation='nearest', origin='lower', cmap=pl.cm.Spectral, extent=(-wlim,wlim,-wlim,wlim), vmin=-z_lim, vmax=z_lim)
     pl.plot(playerA.W[1],playerA.W[2],'ok', markersize=10)
     pl.gca().set_title('utility of playerB')
-    #CBI = pl.colorbar(im, orientation='vertical', shrink=0.8, extend='both')
+    CBI = pl.colorbar(im, orientation='vertical', shrink=0.8, extend='both')
 
     pl.subplot(223) # the relative advantage of Agent 1 over Agent 2.
     im = pl.imshow((util1-util2).transpose(), interpolation='nearest', origin='lower', cmap=pl.cm.Spectral, extent=(-wlim,wlim,-wlim,wlim), vmin=-z_lim, vmax=z_lim)
@@ -154,11 +151,12 @@ if __name__ == '__main__':
         # we will test all sorts of weights for the second player.
         print 'Running one against many alternatives and making a plot...'
         wlim = 20 # wlim sets limits on the weight space we will explore.
-        playerBw1 = np.linspace(-wlim, wlim, 40)
-        playerBw2 = np.linspace(-wlim, wlim, 40)
-        X,Y = np.meshgrid(playerBw1,playerBw2)
-        finalUtil_1 = np.zeros(shape=X.shape)
-        finalUtil_2 = np.zeros(shape=X.shape)
+        n = 41
+        playerBw1 = np.linspace(-wlim, wlim, n)
+        playerBw2 = np.linspace(-wlim, wlim, n)
+        #X,Y = np.meshgrid(playerBw1,playerBw2)
+        finalUtil_1 = np.zeros(shape=(n,n))
+        finalUtil_2 = np.zeros(shape=(n,n))
         for i1,val1 in enumerate(playerBw1):
             for i2,val2 in enumerate(playerBw2):
                 
@@ -171,8 +169,8 @@ if __name__ == '__main__':
                 u1, u2 = run_two_givers(playerA, playerB, args.num_steps)
                 finalUtil_1[i1,i2] = u1
                 finalUtil_2[i1,i2] = u2
-
-
+                if (val1 == playerA.W[1]) and (val2 == playerA.W[2]):
+                    print ' Hey!! ', u1, u2
         # show the results as heat-maps or contours
         display_utilities_heatmaps(wlim, finalUtil_1, finalUtil_2, args, 'utilities_%d.png' % (args.num_steps))
     

@@ -131,13 +131,13 @@ class Giver:
             print '\t with %5s: gave %.2f, recd %.2f' % (nb, self.given_val[nb], self.recd_val[nb])
         
         
-    def do_one_gift(self, verbose=False):
+    def do_one_gift(self, verbose = False):
         """Consider giving one of a commodity to one neighbour. Evaluate
         drive to do this for all commodities and all neighbours,
         including a do-nothing option.
         Then hand it over with the give() method.
         """
-        gift = self.decide_gift(self, verbose = False)
+        gift = self.decide_gift(verbose = False)
         if gift != None:
             c, nb = gift
             self.give(c, nb) # GIVE IT!
@@ -146,7 +146,7 @@ class Giver:
                 self.display()
                 nb.display()
 
-    def decide_gift(self, temperature = 1.0, verbose = False):
+    def decide_gift(self, verbose = False):
         """
         #    calc the one_unit_loss for each commodity. (nb: -inf if count is zero)
         #    ie. a function returning a vector of the utilities following each case.
@@ -173,13 +173,12 @@ class Giver:
         nbr_history, mean_history = self.get_nbr_histories() # returns a dict over neighbours
 
         # form a matrix of "desires" to give X to i, etc.
+        temperature = 1.0
         drive = np.zeros(shape=(len(self.neighbours), len(self.world.commodities)), dtype=float)
         for row, nb in enumerate(self.neighbours):
             for col, c in enumerate(self.world.commodities):
-                drive[row, col] = np.exp(self.W[0] +
-                                         self.W[1] * (lookahead_util[c] - mean_la_util) + 
-                                         self.W[2] * nbr_history[nb]
-                                         )     
+                phi  = self.W[0] + self.W[1] * (lookahead_util[c] - mean_la_util) + self.W[2] * nbr_history[nb]
+                drive[row, col] = np.exp(phi/temperature)
         if verbose: 
             print '#### %s considers gifting ' % (self.name), self.world.commodities
             for j,nb in enumerate(self.neighbours):
@@ -189,6 +188,9 @@ class Giver:
 
         # First decision: if do something what would it be?
         total_drive = np.sum(np.ravel(drive))
+        if total_drive == 0.0:
+            print 'oh shit!',
+            print np.ravel(drive)
         prob = drive / total_drive
         cumulativeProb = np.cumsum(prob)
         # choose an action with probability proportional to the normalised will.
