@@ -148,6 +148,7 @@ if __name__ == '__main__':
         playerA.display()
         playerB.display()
         display_pair_sequence(playerA, playerB, 'sequences.png')
+        print final_util1, final_util_2    
 
     if SINGLE_TEST == False:   
         # we will test all sorts of weights for the second player.
