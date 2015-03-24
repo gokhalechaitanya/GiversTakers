@@ -14,6 +14,7 @@ np.set_printoptions(precision=2)
 
 
 
+
 #%% ----------- start of Giver class definition ------------------------------------------
 class Giver:
 
@@ -84,7 +85,7 @@ class Giver:
         mean = mean/len(self.neighbours)
         return nbr_history, mean        
 
-    def append_trail(self):
+    def append_trails(self):
         self.utility_trail.append(self.get_utility())
         for c in self.world.commodities:
             self.counts_trail[c].append(self.count[c])
@@ -261,7 +262,7 @@ class World:
             for i in rng.permutation(len(self.givers)):
                 tr = self.givers[i]
                 tr.do_one_gift(verbose)
-                tr.append_trail()
+                tr.append_trails()
     
     def adapt_all_traders():
         """Everyone reconsiders their position, given their relative
@@ -277,6 +278,21 @@ class World:
 
 
 #%% Other methods - the global stuff
+def run_two_givers(playA, playB, num_gifts):
+    # Blank all memory of previous transactions
+    playA.blank_memories()
+    playB.blank_memories()
+
+    for t in range(num_gifts):
+        playA.append_trails()
+        playB.append_trails()
+
+        if rng.random() > 0.5:
+            playA.do_one_gift(verbose=args.verbose)
+        else:
+            playB.do_one_gift(verbose=args.verbose)
+
+    return
 
 
 
