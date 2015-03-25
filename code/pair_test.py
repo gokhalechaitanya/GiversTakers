@@ -10,42 +10,11 @@ import numpy.random as rng
 import networkx as nx
 import pylab as pl
 import sys, argparse
-from givers import Giver, World
+from givers import *
 np.set_printoptions(precision=2)
 
 
-def display_pair_sequence(playerA, playerB, outfile = 'apair.png'):
-    # Display the hell out of it
-    pl.clf()
-    pl.subplot(3,1,1)
-    pl.plot(playerA.utility_trail,'s-k')
-    pl.plot(playerB.utility_trail,'o-k', markerfacecolor='white', alpha=.5)
-    pl.title('utilities over time')
-    biplayerA = np.max(playerA.utility_trail)
-    biplayerB = np.max(playerB.utility_trail)
-    biggest = max(biplayerA, biplayerB)
-    #pl.gca().set_ylim(-0.5, biggest + .5)
-
-    maxcount = max(np.max([playerA.counts_trail[x] for x in world.commodities]),np.max([playerA.counts_trail[x] for x in world.commodities]))
-    pl.subplot(3,1,2)
-    for x in world.commodities:
-        pl.plot(playerA.counts_trail[x],'-s', alpha=.5, label = x)
-    pl.gca().set_ylim(-0.5,maxcount+0.5)
-    pl.ylabel(playerA.name)
-    pl.gca().set_xticks([])
-    l = pl.legend()
-
-    pl.subplot(3,1,3)
-    for x in world.commodities:
-        pl.plot(playerB.counts_trail[x],'-o', alpha=.5, label = x)
-    pl.gca().set_ylim(-0.5,maxcount+0.5)
-    pl.ylabel(playerB.name)
-    pl.gca().set_xticks([])
-    pl.savefig(outfile,dpi=200)
-    print 'wrote %s' % (outfile)
-
-    
-def display_utilities_heatmaps(wlim, util1, util2, args, outfile = 'utilities.png'):
+def display_utilities_heatmaps(wlim, util1, util2, outfile = 'utilities.png'):
     fig = pl.figure()
     z_min = 8.  #np.min(displayUtil.ravel())
     z_max = -8. #np.max(displayUtil.ravel())
@@ -128,7 +97,7 @@ if __name__ == '__main__':
         run_two_givers(playerA, playerB, args.num_steps)
         playerA.display()
         playerB.display()
-        display_pair_sequence(playerA, playerB, 'sequences.png')
+        world.display_pair_sequence(playerA, playerB, 'pair_test_seq_example.png')
         print np.mean(playerA.utility_trail), np.mean(playerB.utility_trail)
 
     if SINGLE_TEST == False:   
@@ -156,7 +125,7 @@ if __name__ == '__main__':
                 if (val1 == playerA.W[1]) and (val2 == playerA.W[2]):
                     print ' Hey!! ', playerA.utility_trail[-1], playerB.utility_trail[-1]
         # show the results as heat-maps or contours
-        display_utilities_heatmaps(wlim, finalUtil_1, finalUtil_2, args, 'utilities_%d.png' % (args.num_steps))
+        display_utilities_heatmaps(wlim, finalUtil_1, finalUtil_2, 'utilities_%d.png' % (args.num_steps))
 
         playerA.display()
         playerB.display()

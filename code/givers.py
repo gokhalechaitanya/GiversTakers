@@ -10,6 +10,7 @@ import numpy as np
 import numpy.random as rng
 import networkx as nx
 from network_pic import *
+import matplotlib.pyplot as plt
 np.set_printoptions(precision=2)
 
 
@@ -25,7 +26,7 @@ class Giver:
         else:
             self.count = start_counts        
             
-        self.W = rng.random(3)  -0.5
+        self.W = rng.random(3)  - 0.5
         # W[0]: strength of tendency to PASS (avoid gifting at all)
         # W[1]: strength of tendency to base trades on the value being given away
         #            (a +ve W1 means agent prefers low-loss trades)
@@ -48,21 +49,29 @@ class Giver:
         self.utility_trail = [] # just a record of utility over a season
         self.counts_trail = {c: []  for c in self.world.commodities}  # record for each commodity over a season
 
+
     def __str__(self):
         return self.name
+
 
     def get_utility(self):
         """
         return the utility to this agent of having the current commodity counts
         """
         util = 0.0
-        wee = 0.001 # perhaps having none is horrible but not fatal.
+        wee = 1.00001 # perhaps having none is horrible but not fatal.
         for c in self.world.commodities:
+            util += np.sum(np.power(0.75, np.arange(self.count[c])))
+            """
             if self.count[c] >= 0:
                 util += np.log2(wee + self.count[c])  # for example....
             else:
+                # THIS SHOULD NEVER HAPPEN
                 util += np.log2(wee)  # even worse to give away what you don't even have!
+            """
+
         return util 
+
 
     def get_lookahead_utilities(self, incr=0):
         """ returns a dict with commodities as keys, and the post-gifting utility that 
@@ -80,6 +89,7 @@ class Giver:
         mean = mean / len(self.world.commodities)
         return utils, mean
 
+
     def get_nbr_histories(self): # returns a dict over neighbours
         nbr_history = {}
         mean = 0.0
@@ -88,6 +98,7 @@ class Giver:
             mean += nbr_history[nb]
         mean = mean/len(self.neighbours)
         return nbr_history, mean        
+
 
     def append_trails(self):
         self.utility_trail.append(self.get_utility())
@@ -251,16 +262,12 @@ class World:
             g1.add_neighbour(g2)
             g2.add_neighbour(g1)
         
-    def do_one_season(self, num_gifts=10, verbose=False):
-        """Zillions of trades happen. Agents accumulate rewards. 
-    
-        Should we have a fixed number of trades? Should rewards be grand sum,
-        or on-the-fly exponentially weighted moving average?
+    def do_one_season(self, num_gifts=1, verbose=False):
+        """Gifts happen. Agents accumulate rewards. 
         """
         # First, reset the initial amounts of stuff - e.g. reflecting stochasticity in the environment.
         for tr in self.givers:
             tr.blank_memories() # reset trail to blank - it's a new season.
-            tr.count = {x: rng.randint(0,5)  for x in tr.world.commodities}
     
         # Second, do a bunch of rounds. In each round everyone gets to give if they want.
         for t in range(num_gifts):  # could probably be bigger!
@@ -297,25 +304,93 @@ class World:
                     flux_estimate = tr1.num_gifts_to[tr2] + tr2.num_gifts_to[tr1] 
                     edge_thck.append(flux_estimate)
 
-        G, node_posns = generate_drawable_graph(node_labels_list, edge_ends_list)
-
-        
         # rescale the node sizes to between 0 and 1000, say.
+        # Use the final utility:
         node_sizes = np.array([int(100*g.get_utility()) for g in self.givers])
-        node_sizes = node_sizes - node_sizes.min()
-        node_sizes_list = list(node_sizes * 1000/node_sizes.max())
+        # Or take an average over all time:
+        #node_sizes = np.array([int(100*np.mean(g.utility_trail)) for g in self.givers])
+        node_sizes = np.power(node_sizes, 2.0)
+        #node_sizes = node_sizes - node_sizes.min()
+        node_sizes_list = list((node_sizes * 950/node_sizes.max()) + 50)
 
         # rescale the edge thicknesses to between 0 and 10, say.
         tmp = np.array(edge_thck)
         if tmp.max() <= 0.0:
             edge_thck = 6 # abandon all hope and just use "sucks" for all.
         else:
-            tmp = tmp - tmp.min()
-            edge_thck = list(tmp * 10/tmp.max())
+            #tmp = tmp - tmp.min()
+            edge_thck = list(tmp * 10/tmp.max()  + 0.3)
 
-
+        G, node_posns = generate_drawable_graph(node_labels_list, edge_ends_list)
         draw_graph(G, node_posns, node_labels_list, node_sizes_list, edge_ends_list, edge_labels_list, edge_thck, filename=filename)
 
+
+    def display_pair_sequence(self, playerA, playerB, outfile = 'apair.png'):
+        # Display the hell out of it
+        plt.clf()
+        plt.subplot(3,1,1)
+        plt.plot(playerA.utility_trail,'s-k')
+        plt.plot(playerB.utility_trail,'o-k', markerfacecolor='white', alpha=.5)
+        plt.title('utilities over time')
+        biplayerA = np.max(playerA.utility_trail)
+        biplayerB = np.max(playerB.utility_trail)
+        biggest = max(biplayerA, biplayerB)
+        #plt.gca().set_ylim(-0.5, biggest + .5)
+        
+        maxcount = max(np.max([playerA.counts_trail[x] for x in self.commodities]), np.max([playerB.counts_trail[x] for x in self.commodities]))
+
+        plt.subplot(3,1,2) # player A
+        for x in self.commodities:
+            plt.plot(playerA.counts_trail[x],'-s', alpha=.5, label = x)
+        plt.gca().set_ylim(-0.5,maxcount+0.5)
+        plt.ylabel(playerA.name)
+        plt.gca().set_xticks([])
+        l = plt.legend()
+
+        plt.subplot(3,1,3) # player B
+        for x in self.commodities:
+            plt.plot(playerB.counts_trail[x],'-o', alpha=.5, label = x)
+        plt.gca().set_ylim(-0.5,maxcount+0.5)
+        plt.ylabel(playerB.name)
+        plt.gca().set_xticks([])
+        plt.savefig(outfile,dpi=200)
+        print 'wrote %s' % (outfile)
+
+
+    def display_all_sequences(self, outfile = 'all_sequences.png'):
+        # Display the hell out of it
+        plt.clf()
+        N = len(self.givers)
+
+        # figure out the largest count so all axes can use it / be comparable.
+        maxcount = 0
+        for g in self.givers:
+            maxcount = max(maxcount, np.max([g.counts_trail[x] for x in self.commodities]))
+        minutility, maxutility = 10000.0, -100000.0
+        for g in self.givers:
+            maxutility = max(maxutility,  max(g.utility_trail))
+            minutility = min(minutility,  min(g.utility_trail))
+        print   'min and max : ', minutility, maxutility
+
+        n = 1
+        for g in self.givers:
+            plt.subplot(N,1,n)
+            n = n+1
+
+            L = len(g.counts_trail[x])
+            for i in range(L):
+                alph = 1.0 * float(g.utility_trail[i] - minutility) / (maxutility - minutility)
+                plt.plot(i*np.ones(maxcount/2), range(0,maxcount, 2),'o', color='pink', markeredgecolor='none', alpha=alph)
+            for x in self.commodities:
+                plt.plot(g.counts_trail[x],'-s', alpha=1.0, label = x)
+            plt.gca().set_ylim(-0.5,maxcount+0.5)
+            plt.ylabel(g.name)
+            plt.gca().set_xticks([])
+
+        l = plt.legend()
+        plt.savefig(outfile,dpi=200)
+        print 'wrote %s' % (outfile)
+        return
 
 # ----------- end of World class definition ------------------------------------------
 
@@ -331,12 +406,16 @@ def run_two_givers(playA, playB, num_gifts):
         playB.append_trails()
 
         if rng.random() > 0.5:
-            playA.do_one_gift(verbose=args.verbose)
+            playA.do_one_gift()
         else:
-            playB.do_one_gift(verbose=args.verbose)
+            playB.do_one_gift()
 
     return
 
+
+
+
+##############################################    
 
 
 if __name__ == '__main__':
@@ -344,7 +423,7 @@ if __name__ == '__main__':
     # Define the trader network
     world = World(['apples', 'shoes', 'wheat'])
 
-    names = ['Shaun', 'Andy', 'Tava', 'Alexei', 'Stephen', 'Marcus', 'Sally', 'Dion', 'Uli', 'Chaitanya']
+    names = ['Shaun', 'Andy', 'Tava', 'Alexei', 'Stephen', 'Marcus', 'Sally', 'Dion']
     
     for name in names:
         tmpg = Giver(world, name, None)
@@ -376,4 +455,4 @@ if __name__ == '__main__':
         tr.display()
     
     print 'showing the network...'
-    world.show_network()
+    world.show_network('givers_random_network_example.png')
