@@ -14,7 +14,6 @@ np.set_printoptions(precision=2)
 
 
 
-
 #%% ----------- start of Giver class definition ------------------------------------------
 class Giver:
 
@@ -26,21 +25,26 @@ class Giver:
         else:
             self.count = start_counts        
             
-        self.W = rng.normal(3)  -0.5
+        self.W = rng.random(3)  -0.5
         # W[0]: strength of tendency to PASS (avoid gifting at all)
         # W[1]: strength of tendency to base trades on the value being given away
         #            (a +ve W1 means agent prefers low-loss trades)
         # W[2]: strength of tendency to base trades on shared history of trades
         #            (a +ve W2 means agent prefers to trade when it is "in the red")
+
         self.neighbours = []
-        self.count = {}
-        self.given_val = {}           # keys will be the neighbours for the following dictionaries
+        # the keys for each of the following dicts will be the neighbours
+        self.given_val = {}           
         self.recd_val = {}
-        self.blank_memories()
+        self.num_gifts_to = {}
+
+        self.blank_memories() # ensure we start with a clean slate
+
 
     def blank_memories(self):
         self.given_val = {nb: 0.0  for nb in self.neighbours}
         self.recd_val = {nb: 0.0  for nb in self.neighbours}
+        self.num_gifts_to = {nb: 0  for nb in self.neighbours}
         self.utility_trail = [] # just a record of utility over a season
         self.counts_trail = {c: []  for c in self.world.commodities}  # record for each commodity over a season
 
@@ -97,6 +101,7 @@ class Giver:
             self.neighbours.append(new_neighbour)
             self.given_val[new_neighbour] = 0.0
             self.recd_val[new_neighbour]  = 0.0
+            self.num_gifts_to[new_neighbour]  = 0
             return True
 
     def set_count(self, commodity, i): 
@@ -129,7 +134,7 @@ class Giver:
             print '\t %10s: %3d' % (x, self.count[x])
         print '\t    utility: %.2f' %(self.get_utility())
         for nb in self.neighbours:
-            print '\t with %5s: gave %.2f, recd %.2f' % (nb, self.given_val[nb], self.recd_val[nb])
+            print '\t with %5s: gave %.2f (%d gifts), recd %.2f (%d)' % (nb, self.given_val[nb], self.num_gifts_to[nb], self.recd_val[nb], nb.num_gifts_to[self])
         
         
     def do_one_gift(self, verbose = False):
@@ -218,11 +223,12 @@ class Giver:
         """ Give a specific commodity to a specific trader """
         if self.count[commodity] == 0:
             return
-            
+
         base_utility = self.get_utility()   
         self.count[commodity]    -= 1
         lost = self.get_utility() - base_utility
         self.given_val[recipient] = self.given_val[recipient] - lost
+        self.num_gifts_to[recipient] += 1
     
         base_utility = recipient.get_utility()   
         recipient.count[commodity] += 1
@@ -245,7 +251,7 @@ class World:
             g1.add_neighbour(g2)
             g2.add_neighbour(g1)
         
-    def do_one_season(self, verbose=False):
+    def do_one_season(self, num_gifts=10, verbose=False):
         """Zillions of trades happen. Agents accumulate rewards. 
     
         Should we have a fixed number of trades? Should rewards be grand sum,
@@ -253,11 +259,11 @@ class World:
         """
         # First, reset the initial amounts of stuff - e.g. reflecting stochasticity in the environment.
         for tr in self.givers:
-            tr.utility_trail = [] # reset trail to blank - it's a new season.
+            tr.blank_memories() # reset trail to blank - it's a new season.
             tr.count = {x: rng.randint(0,5)  for x in tr.world.commodities}
     
         # Second, do a bunch of rounds. In each round everyone gets to give if they want.
-        for t in range(10):  # could probably be bigger!
+        for t in range(num_gifts):  # could probably be bigger!
             # do one round of all traders, in a random order
             for i in rng.permutation(len(self.givers)):
                 tr = self.givers[i]
@@ -273,6 +279,43 @@ class World:
         shoe-guy's behavioural strategy too. But this seems to defy
         locality.
         """
+
+    def show_network(self, filename=None):
+        #%% Show the whole network as a picture    
+        node_labels_list = []
+        edge_ends_list = []
+        edge_labels_list = []
+        edge_thck = []
+
+        for tr1 in self.givers:
+            node_labels_list.append(tr1.name)
+            for tr2 in tr1.neighbours:
+                # is it in the set already?
+                if (tr2.name, tr1.name) not in edge_ends_list:
+                    edge_ends_list.append((tr1.name, tr2.name))
+                    edge_labels_list.append(tr1.name + ' and ' + tr2.name)
+                    flux_estimate = tr1.num_gifts_to[tr2] + tr2.num_gifts_to[tr1] 
+                    edge_thck.append(flux_estimate)
+
+        G, node_posns = generate_drawable_graph(node_labels_list, edge_ends_list)
+
+        
+        # rescale the node sizes to between 0 and 1000, say.
+        node_sizes = np.array([int(100*g.get_utility()) for g in self.givers])
+        node_sizes = node_sizes - node_sizes.min()
+        node_sizes_list = list(node_sizes * 1000/node_sizes.max())
+
+        # rescale the edge thicknesses to between 0 and 10, say.
+        tmp = np.array(edge_thck)
+        if tmp.max() <= 0.0:
+            edge_thck = 6 # abandon all hope and just use "sucks" for all.
+        else:
+            tmp = tmp - tmp.min()
+            edge_thck = list(tmp * 10/tmp.max())
+
+
+        draw_graph(G, node_posns, node_labels_list, node_sizes_list, edge_ends_list, edge_labels_list, edge_thck, filename=filename)
+
 
 # ----------- end of World class definition ------------------------------------------
 
@@ -299,51 +342,38 @@ def run_two_givers(playA, playB, num_gifts):
 if __name__ == '__main__':
 
     # Define the trader network
-    world = World(['apples','shoes','wheat'])
+    world = World(['apples', 'shoes', 'wheat'])
 
-    names = ['Bulbulia', 'Yoyo', 'Bianca', 'Mark', 'Serena', 'Kurt', 'Shaun', 'Shona', 'Grant', 'Bill', 'Shorty', 'Kim', 'Tyler']
+    names = ['Shaun', 'Andy', 'Tava', 'Alexei', 'Stephen', 'Marcus', 'Sally', 'Dion', 'Uli', 'Chaitanya']
     
     for name in names:
-        world.add_node(Giver(world, name), edges=[])
+        tmpg = Giver(world, name, None)
+        world.add_node(tmpg, edges=[])
     # link them up somehow...
     min_num_links = 2
     for tr1 in world.givers:
+        print 'wiring up ', tr1.name
         n, attempts = 0, 0
         while (n < min_num_links) and (attempts < 10):
             attempts = attempts + 1
             tr2 = world.givers[rng.randint(len(world.givers))]
             isNewEdge = (tr1.add_neighbour(tr2) and tr2.add_neighbour(tr1))
             if isNewEdge:
+                print '\t wired up ', tr1.name, ' to ', tr2.name
                 n = n + 1
+        print tr1.name, ' should be done - let us see: '
+        tr1.display()
+    print '^^^^^^^^^^^^^^^^   all wired up ^^^^^^^^^^^^^^^^^^^^^^'
     
     H = nx.frucht_graph()  # nice to use this one or other standards...
     # Test one trade:
     #tr = traders[rng.randint(len(traders))]
     #tr.do_one_gift()
 
-    for tr in world.givers: 
-        tr.display()
-    print '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^'
-    world.do_one_season(verbose=False)
+    print 'doing one season...'
+    world.do_one_season(num_gifts=10, verbose=False)
     for tr in world.givers: 
         tr.display()
     
-
-    #%% Show the whole network as a picture    
-    node_labels = []
-    edge_ends_list = []
-    edge_labels = []
-    for tr1 in world.givers:
-        node_labels.append(tr1.name)
-        for tr2 in tr1.neighbours:
-            # is it in the set already?
-            if (tr2.name, tr1.name) not in edge_ends_list:
-                edge_ends_list.append((tr1.name, tr2.name))
-                edge_labels.append(tr1.name + ' and ' + tr2.name)
-                
-    G, node_posns = generate_drawable_graph(node_labels, edge_ends_list)
-    edge_thck = 6
-    #edge_thck = []
-    #for (name1,name2) in edge_ends_list:
-    #    edge_thck.append(traders[name1].num_trades[traders[name2]])
-    draw_graph(G, node_posns, names, edge_ends_list, edge_labels, edge_thck)
+    print 'showing the network...'
+    world.show_network()
