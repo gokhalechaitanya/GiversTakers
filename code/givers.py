@@ -310,7 +310,7 @@ class World:
         # Or take an average over all time:
         #node_sizes = np.array([int(100*np.mean(g.utility_trail)) for g in self.givers])
         node_sizes = np.power(node_sizes, 2.0)
-        #node_sizes = node_sizes - node_sizes.min()
+        node_sizes = node_sizes - node_sizes.min()
         node_sizes_list = list((node_sizes * 950/node_sizes.max()) + 50)
 
         # rescale the edge thicknesses to between 0 and 10, say.

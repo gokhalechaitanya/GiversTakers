@@ -30,21 +30,28 @@ if __name__ == '__main__':
 
     world = World(commodities=['food', 'water', 'shelter'])
     players = []
-    init_total = 24
-    players.append(Giver(world, 'Jim', dict(zip(world.commodities, [init_total,0,0]))))
+    Q = 24 # the initial total number of items each individual possesses.
+    quantities = [0] * len(world.commodities)
+    players.append(Giver(world, 'Jim', dict(zip(world.commodities, quantities))))
+    players[-1].count[world.commodities[0]] = Q
     players[-1].set_weights(args.Aweights)
-    players.append(Giver(world, 'Joe', dict(zip(world.commodities, [0,init_total,0]))))
+    players.append(Giver(world, 'Joe', dict(zip(world.commodities, quantities))))
+    players[-1].count[world.commodities[1]] = Q
     players[-1].set_weights(args.Aweights)
-    players.append(Giver(world, 'Jaz', dict(zip(world.commodities, [0,0,init_total]))))
+    players.append(Giver(world, 'Jaz', dict(zip(world.commodities, quantities))))
+    players[-1].count[world.commodities[2]] = Q
     players[-1].set_weights(args.Aweights)
     links = [[0,1],[0,2],[1,2]]
 
     if args.Bweights:
-        players.append(Giver(world, 'Sue', dict(zip(world.commodities, [init_total,0,0]))))
+        players.append(Giver(world, 'Sue', dict(zip(world.commodities, quantities))))
+        players[-1].count[world.commodities[0]] = Q
         players[-1].set_weights(args.Bweights)
-        players.append(Giver(world, 'Sam', dict(zip(world.commodities, [0,init_total,0]))))
+        players.append(Giver(world, 'Sam', dict(zip(world.commodities, quantities))))
+        players[-1].count[world.commodities[1]] = Q
         players[-1].set_weights(args.Bweights)
-        players.append(Giver(world, 'Syl', dict(zip(world.commodities, [0,0,init_total]))))
+        players.append(Giver(world, 'Syl', dict(zip(world.commodities, quantities))))
+        players[-1].count[world.commodities[2]] = Q
         players[-1].set_weights(args.Bweights)
         links = [[0,1],[0,2],[1,2],[1,3],[2,4],[3,4],[3,5],[4,5]]
 
