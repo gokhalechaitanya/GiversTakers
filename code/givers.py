@@ -99,6 +99,13 @@ class Giver:
         mean = mean/len(self.neighbours)
         return nbr_history, mean        
 
+    def forget(self, factor):
+        """ Fade the memories a little!
+        """
+        for nb in self.neighbours:
+            self.recd_val[nb]  *= factor
+            self.given_val[nb] *= factor
+
 
     def append_trails(self):
         self.utility_trail.append(self.get_utility())
@@ -276,6 +283,9 @@ class World:
                 tr = self.givers[i]
                 tr.do_one_gift(verbose)
                 tr.append_trails()
+            # fade all the memories a little?
+            for g in self.givers:
+                g.forget(0.5)
     
     def adapt_all_traders():
         """Everyone reconsiders their position, given their relative
