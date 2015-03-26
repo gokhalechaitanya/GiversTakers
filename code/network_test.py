@@ -20,6 +20,9 @@ if __name__ == '__main__':
                          default=10)
     parser.add_argument("-v", "--verbose", help="use verbose output",
                         action="store_true")
+    parser.add_argument("-m", "--memory", type=float,
+                        help="1 is perfect memory, 0 is instant forgetting",
+                        default=1.0)
     parser.add_argument('-A', '--Aweights', nargs='+', type=float, help='weights for agent B', required='True')
     parser.add_argument('-B','--Bweights', nargs='+', type=float, help='weights for agent B')
 
@@ -62,7 +65,7 @@ if __name__ == '__main__':
         world.add_node(player)
 
     print '&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&'
-    world.do_one_season(args.num_steps, verbose=args.verbose)
+    world.do_one_season(args.num_steps, memory_factor=args.memory, verbose=args.verbose)
     print '&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&'
 
     for player in players:

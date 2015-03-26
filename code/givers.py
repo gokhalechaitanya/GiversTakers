@@ -22,7 +22,7 @@ class Giver:
         self.world = world # the world this agent lives within.        
         self.name = name
         if start_counts is None:
-            self.count = {x: rng.randint(0,5)  for x in self.world.commodities}            
+            self.count = {x: rng.randint(0,16)  for x in self.world.commodities}            
         else:
             self.count = start_counts        
             
@@ -99,8 +99,10 @@ class Giver:
         mean = mean/len(self.neighbours)
         return nbr_history, mean        
 
-    def forget(self, factor):
-        """ Fade the memories a little!
+    def remember(self, factor):
+        """ Try to remember! 
+            factor = 1 is perfect memory. 
+            factor = 0 is instant forgetting.
         """
         for nb in self.neighbours:
             self.recd_val[nb]  *= factor
@@ -269,7 +271,7 @@ class World:
             g1.add_neighbour(g2)
             g2.add_neighbour(g1)
         
-    def do_one_season(self, num_gifts=1, verbose=False):
+    def do_one_season(self, num_gifts=1, memory_factor=1., verbose=False):
         """Gifts happen. Agents accumulate rewards. 
         """
         # First, reset the initial amounts of stuff - e.g. reflecting stochasticity in the environment.
@@ -285,7 +287,7 @@ class World:
                 tr.append_trails()
             # fade all the memories a little?
             for g in self.givers:
-                g.forget(0.5)
+                g.remember(memory_factor)
     
     def adapt_all_traders():
         """Everyone reconsiders their position, given their relative
@@ -376,11 +378,13 @@ class World:
         maxcount = 0
         for g in self.givers:
             maxcount = max(maxcount, np.max([g.counts_trail[x] for x in self.commodities]))
+        maxcount = max(maxcount, 3)
         minutility, maxutility = 10000.0, -100000.0
         for g in self.givers:
             maxutility = max(maxutility,  max(g.utility_trail))
             minutility = min(minutility,  min(g.utility_trail))
-        print   'min and max : ', minutility, maxutility
+        print 'min and max : ', minutility, maxutility
+        #minutility = min(0, minutility) # nasty display hack: making it zero if it's positive. :-(
 
         n = 1
         for g in self.givers:
@@ -390,7 +394,9 @@ class World:
             L = len(g.counts_trail[x])
             for i in range(L):
                 alph = 1.0 * float(g.utility_trail[i] - minutility) / (maxutility - minutility)
-                plt.plot(i*np.ones(maxcount/2), range(0,maxcount, 2),'o', color='pink', markeredgecolor='none', alpha=alph)
+                ys = np.arange(0, maxcount+2, 1)
+                xs = np.array([i] * len(ys))
+                plt.plot(xs, ys, '.', color='gray', markeredgecolor='none', alpha=1-alph)
             for x in self.commodities:
                 plt.plot(g.counts_trail[x],'-s', alpha=1.0, label = x)
             plt.gca().set_ylim(-0.5,maxcount+0.5)
@@ -402,7 +408,7 @@ class World:
         print 'wrote %s' % (outfile)
         return
 
-# ----------- end of World class definition ------------------------------------------
+# ----------- end of World class definition -------------------------
 
 
 #%% Other methods - the global stuff
@@ -459,10 +465,11 @@ if __name__ == '__main__':
     #tr = traders[rng.randint(len(traders))]
     #tr.do_one_gift()
 
-    print 'doing one season...'
-    world.do_one_season(num_gifts=10, verbose=False)
+    print 'doing one season...' 
+    world.do_one_season(num_gifts=200, memory_factor=0.8, verbose=False)
     for tr in world.givers: 
         tr.display()
     
     print 'showing the network...'
+    world.display_all_sequences('givers_random_network_example_seq.png')
     world.show_network('givers_random_network_example.png')
