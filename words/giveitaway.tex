@@ -13,29 +13,101 @@ whoa, the whole thing's really an abstract, I think.
 
 \section{setup}
 
-\begin{itemize}
- \item thing1
- \item thing2
-\end{itemize}
 
 World has $M$ distinct ``commodities'' $A, B, \ldots, X$.
 
 Agents in a network. 
 
-The $i^\text{th}$ agent has some number of each commodity, stored as a
-vector of counts $\mathbf{n}^i = (n^i_A, n^i_B \ldots )$ with integer
-$n^i_X \geq 0$.
+An agent starts off having some number of each commodity, stored as a
+vector of counts $\mathbf{n} = (n_A, n_B \ldots )$ with integer
+$n_X \geq 0$. Different agents will typically start off with different
+counts, reflecting this cruel world's unfeeling ways.
 
-The utility for the $i^\text{th}$ agent $U^i = U(\mathbf{n}^i)$. More is good, so this should be monotonically increasing.
-But it should ``roll over'' at high counts. I am currently using 
+This confers a ``utility'' $U = U(\mathbf{n}^i)$ on that agent. More
+is good, so this should be monotonically increasing.  But the marginal
+gains should decrease with the count. I am currently using something
+like
 \[
-U(\mathbf{n}) = \sum_X \log n_X
+U(\mathbf{n}) = \sum_X \log (1 + n_X)
 \]
-which means all commodities are ``essential'', since this diverges at
-zero.  All commodities weight equally in this form - there are no
-``valuables'' as such.
+Note that all commodities weight equally in this form - there are no
+``valuables'' as such. That's not essential, just a starting point.
 
-Each agent makes decisions about which of its neighbours it gifts, and
-which commodity is used as a gift.
+Each agent then makes decisions about which of its neighbours it
+gifts, and which commodity is used as a gift, and does this using a
+few heritable traits. Currently I'm doing this with 3 weights.
+\begin{itemize}
+\item $W_0$ controls the willingness of the agent to give at all (versus simply ``Pass'' on a round).
+\item $W_1$ determines the importance of the loss of utility to be borne, should one give a certain item away.
+\item $W_2$ determines the importance of prior history in the interaction with a given neighbour: it is going to weight the nett gain in utility that the neighbour is responsible for.
+\end{itemize}
+
+[Note that other possibilities beckon. I suspect something like the
+above is probably ``minimal'', in that I doubt you can get sustainable
+giving occuring at all without those 3 ingredients in some form,
+although I could be wrong. But, for example, it makes no use of
+knowledge about what the other agent might ``want'' to be
+given. Smarter gifting of this kind should propogate, and might amount to
+something like empathy (!). But I'm getting ahead of myself here.]
+
+
+The space of gifting options for a given agent is 
+\begin{itemize}
+\item give commodity $X$ to neighbour $i$, to be considered $\forall X, i$.
+\item or perhaps give nothing to anybody.
+\end{itemize}
+
+For the agent considering its options, 
+we calculate a matrix of ``drives'' $D$ to give commodity $X$ to neighbour $i$:
+\begin{align*}
+D_{X,i} &= W_{0} \; + \; W_{1} \, L_{X}(\mathbf{n}) \; + \; W_{2} \, G_{i}
+\end{align*}
+where 
+\begin{itemize}
+\item $L_{x}(\mathbf{n})$ denotes the size of the drop in utility that would be caused by losing one item of $X$.
+\item $G_{i}$ is the nett balance of utility gains attributable to interactions with neighbour $i$. Note that this is entirely from the perspective of {\it this agent's} utility function, but just because it feels hard-done-by doesn't mean the other guy isn't feeling deserving!
+
+  $G_{i}$ might be achieved ``perfectly'' by an agent with excellent
+  memory for the effects of past events, or imperfectly by an agent
+  whose accumulation of $G$ is actually an exponentially weighted
+  moving average of recent events only.
+\end{itemize}
+
+\begin{figure}[b]
+\includegraphics[width=.5\textwidth]{givers_random_network_example}
+\includegraphics[width=.5\textwidth]{givers_random_network_example_seq}
+\caption{A bunch of agents, each with random behavioural parameters.  LEFT: The network used. Node sizes indicate the utility at the end of the season, which was a couple of hundred gifts long. Links thicknesses indicate the total number of gifts exchanged (there's no indication here of which way they travelled though). RIGHT: the timecourse of commodity transfers. The gray background indicates the utility of the agent at that moment (with lighter background indicating higher utility). }
+\end{figure}
+
+\section{conditional gifting can take over, I think}
+
+\begin{figure}[b]
+\includegraphics[width=.5\textwidth]{allTFT_good_memory_result}
+\includegraphics[width=.5\textwidth]{allTFT_good_memory_seq}
+\caption{6 agents, all playing a form of ``Tit for tat'', $w=(-1,5,10)$. There were 3 commodities, and each agent started off with just one of them in abundance and none of the others. LEFT: Clearly a sub-network of reciprocating gifters has established, and the guys at the ``leaves'' (ends) are missing out on utility. RIGHT: You can see that things got ugly for Jim at the end there.}
+\end{figure}
+
+
+\begin{figure}[b]
+\includegraphics[width=.5\textwidth]{twotribes_good_memory_result}
+\includegraphics[width=.5\textwidth]{twotribes_good_memory_seq}
+\caption{The 3 amigos Jim, Joe and Jaz play ``Tit for tat'', $w=(-1,5,10)$, but the other three avoid giving anything away (ie. they only ever {\it receive} gifts).  {\bf Some of the TFT players come out on top (but some never get going). We might expect reciprocated gifting to spread, overall? }}
+\end{figure}
+
+\section{what happens with shorter memories}
+
+\begin{figure}[b]
+\includegraphics[width=.5\textwidth]{allTFT_little_memory_result}
+\includegraphics[width=.5\textwidth]{allTFT_little_memory_seq}
+\caption{First we try 6 agents, all playing a form of ``Tit for tat'' as before. But this time agents are slowly forgetting the ``debt'' they feel.  {\bf Huh?}}
+\end{figure}
+
+
+\begin{figure}[b]
+\includegraphics[width=.5\textwidth]{twotribes_little_memory_result}
+\includegraphics[width=.5\textwidth]{twotribes_little_memory_seq}
+\caption{The 3 amigos Jim, Joe and Jaz play ``Tit for tat'', $w=(-1,5,10)$, but the other three avoid giving anything away. {\bf The amigos all trade nicely with each other BUT Sue and Sam clean them up! Hilarious.} Presumably they keep forgetting that Sue and Sam are ripping them off.}
+\end{figure}
 
 \end{document}
+
